@@ -1,0 +1,467 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --primary: #0284c7;
+  --secondary: #7c3aed;
+  --success: #16a34a;
+  --background: #f0f4f8;
+  --text: #0f172a;
+  --muted: #64748b;
+  --surface: #ffffff;
+  --line: #e2e8f0;
+  --shadow: rgba(2, 132, 199, 0.14);
+}
+
+html {
+  min-height: 100%;
+}
+
+body {
+  font-family: 'Noto Sans JP', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--background);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 2rem 1.5rem;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(2, 132, 199, 0.10), transparent 60%),
+    radial-gradient(ellipse at 70% 80%, rgba(124, 58, 237, 0.08), transparent 60%);
+  pointer-events: none;
+}
+
+.wrap {
+  max-width: 440px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.center-screen {
+  min-height: calc(100vh - 4rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 2rem;
+  animation: fadeUp 0.5s both;
+}
+
+.logo {
+  font-family: 'Orbitron', monospace;
+  font-weight: 900;
+  font-size: 1.05rem;
+  letter-spacing: 0.14em;
+  color: var(--primary);
+}
+
+h1, .title {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.45rem;
+  font-weight: 900;
+  margin-top: 0.5rem;
+}
+
+.sub {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.75;
+  margin-top: 0.55rem;
+}
+
+.card, .count-card, .grid-card, .message-card {
+  background: var(--surface);
+  border-radius: 18px;
+  box-shadow: 0 8px 36px var(--shadow);
+}
+
+.card {
+  padding: 2.5rem 2rem;
+  text-align: center;
+  animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.count-card {
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.35rem;
+  animation: fadeUp 0.5s 0.1s both;
+}
+
+.count-number {
+  font-family: 'Orbitron', monospace;
+  font-size: 3rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+.count-number span {
+  font-size: 1.1rem;
+  color: #94a3b8;
+}
+
+.count-label {
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.count-text {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.75;
+}
+
+.progress-bar {
+  height: 10px;
+  background: var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 0.8rem;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  transition: width 0.8s ease;
+}
+
+.grid-card {
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  animation: fadeUp 0.5s 0.2s both;
+}
+
+.grid-title {
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+
+.stamp-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stamp-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stamp-circle, .dot {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.stamp-circle {
+  font-size: 1.6rem;
+  position: relative;
+}
+
+.stamp-circle.got, .dot.got, .dot.current {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.32);
+}
+
+.stamp-circle.got::after {
+  content: '✓';
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--success);
+  color: white;
+  font-size: 0.62rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stamp-label {
+  font-size: 0.65rem;
+  color: #94a3b8;
+}
+
+.stamp-label.got {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.message-card {
+  color: white;
+  text-align: center;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  animation: fadeUp 0.5s 0.3s both;
+}
+
+.message-card.complete {
+  background: linear-gradient(135deg, var(--success), var(--primary));
+}
+
+.message-emoji {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.message-text {
+  font-size: 0.9rem;
+  line-height: 1.8;
+  opacity: 0.95;
+}
+
+.badge {
+  font-family: 'Orbitron', monospace;
+  color: var(--primary);
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  margin-bottom: 0.6rem;
+}
+
+.stamp-icon, .trophy {
+  font-size: 5rem;
+  margin: 1rem 0;
+  animation: bounce 0.6s 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.stamp-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.45rem;
+  font-weight: 900;
+  margin-bottom: 0.65rem;
+}
+
+.stamp-title span {
+  color: var(--primary);
+}
+
+.get-message {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.8;
+  margin: 1rem 0 1.5rem;
+}
+
+.progress-label {
+  font-size: 0.74rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  margin-bottom: 0.55rem;
+}
+
+.dot {
+  font-size: 1.1rem;
+}
+
+.dot.current {
+  animation: pulse 1s infinite;
+}
+
+.notice {
+  background: #f8fafc;
+  color: var(--muted);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  margin-top: 1rem;
+}
+
+.notice.important {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.button {
+  display: block;
+  width: 100%;
+  text-decoration: none;
+  border: 2px solid var(--primary);
+  background: white;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.92rem;
+  padding: 0.9rem 1rem;
+  border-radius: 999px;
+  text-align: center;
+  letter-spacing: 0.04em;
+  transition: transform 0.2s, opacity 0.2s, color 0.2s, background 0.2s;
+  margin-top: 0.8rem;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--primary);
+  color: white;
+  transform: translateY(-2px);
+}
+
+.button.primary {
+  border: none;
+  color: white;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+}
+
+.button.primary:hover {
+  opacity: 0.92;
+}
+
+.button.danger {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.button.danger:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.prize-box {
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border: 2px solid #f59e0b;
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.prize-title {
+  color: #92400e;
+  font-size: 0.76rem;
+  letter-spacing: 0.18em;
+  margin-bottom: 0.55rem;
+}
+
+.prize-content {
+  color: #78350f;
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.prize-note {
+  color: #92400e;
+  font-size: 0.82rem;
+  line-height: 1.65;
+  margin-top: 0.55rem;
+}
+
+.stamp-row {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin: 1.2rem 0;
+}
+
+.stamp-dot {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  font-size: 1.1rem;
+  animation: dotPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.confetti span {
+  position: absolute;
+  top: -20px;
+  width: 10px;
+  height: 14px;
+  border-radius: 2px;
+  animation: fall linear infinite;
+  opacity: 0.85;
+}
+
+.test-links {
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.test-link {
+  display: block;
+  text-decoration: none;
+  color: var(--primary);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  background: white;
+  font-size: 0.9rem;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.7); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes bounce {
+  from { opacity: 0; transform: translateY(20px) scale(0.8); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes dotPop {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(2, 132, 199, 0.50); }
+  50% { box-shadow: 0 0 22px rgba(2, 132, 199, 0.80); }
+}
+
+@keyframes fall {
+  to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+
+@media (max-width: 390px) {
+  body { padding: 1.5rem 1rem; }
+  .count-card { gap: 1rem; padding: 1.25rem; }
+  .count-number { font-size: 2.55rem; }
+  .stamp-grid { gap: 7px; }
+}

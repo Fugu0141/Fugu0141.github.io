@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stamp Get</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <main class="wrap center-screen">
+    <section class="card">
+      <p class="logo" data-logo>STAMP RALLY</p>
+      <p class="badge" data-badge>// STAMP</p>
+      <div class="stamp-icon" data-icon>🌟</div>
+      <h1 class="stamp-title" data-stamp-title>STAMP <span>GET!</span></h1>
+      <p class="get-message" data-message>スタンプをゲットしました！</p>
+
+      <div>
+        <p class="progress-label" data-progress-label>スタンプ進捗</p>
+        <div class="progress-bar" aria-hidden="true">
+          <div class="progress-fill" data-fill></div>
+        </div>
+      </div>
+
+      <div class="stamp-grid" data-grid style="margin-top:1rem"></div>
+
+      <div class="notice" data-already style="display:none">✅ このスタンプはすでに取得済みです</div>
+      <div class="notice important" data-auto-redirect style="display:none">すべて集めたので、まもなくコンプリートページへ移動します。</div>
+
+      <a class="button primary" href="stamp.html" data-stamp-book-button>スタンプ帳を見る</a>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="assets/js/stamp-core.js"></script>
+  <script src="assets/js/stamp-get-page.js"></script>
+</body>
+</html>

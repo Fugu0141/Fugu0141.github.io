@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Stamp Book</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <main class="wrap">
+    <header>
+      <p class="logo" data-logo>STAMP RALLY</p>
+      <h1 data-title>スタンプ帳</h1>
+      <p class="sub" data-lead>QRコードを読み取ってスタンプを集めよう！</p>
+    </header>
+
+    <section class="count-card" aria-label="Current stamp count">
+      <div class="count-number" data-count>0<span>/5</span></div>
+      <div style="flex:1">
+        <div class="count-label" data-count-label>現在のスタンプ数</div>
+        <div class="count-text" data-count-text>まだスタンプがありません。</div>
+        <div class="progress-bar" aria-hidden="true">
+          <div class="progress-fill" data-fill></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid-card">
+      <p class="grid-title" data-grid-title>// STAMP COLLECTION</p>
+      <div class="stamp-grid" data-grid></div>
+    </section>
+
+    <section class="message-card" data-message-card>
+      <div class="message-emoji" data-message-emoji>🗺️</div>
+      <div class="message-text" data-message-text>QRコードを読み取ると、ここにスタンプが追加されます。</div>
+    </section>
+
+    <a class="button" href="index.html" data-home-button>ホームへ</a>
+    <a class="button primary" href="goal.html" data-goal-button style="display:none">コンプリートページへ</a>
+    <button class="button danger" type="button" data-reset-button>進捗をリセット</button>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="assets/js/stamp-core.js"></script>
+  <script src="assets/js/stamp-page.js"></script>
+</body>
+</html>
