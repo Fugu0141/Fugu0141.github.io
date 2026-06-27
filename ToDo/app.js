@@ -1,4 +1,4 @@
-const STORAGE_KEY = "quest-sticky-todo-v6";
+const STORAGE_KEY = "quest-sticky-todo-v8";
 
 const board = document.getElementById("board");
 const links = document.getElementById("links");
@@ -30,11 +30,21 @@ const dateSaveBtn = document.getElementById("dateSaveBtn");
 
 const noteW = 220;
 const noteH = 104;
-const axisLeft = 110;
-const axisTop = 42;
-const dateGap = 280;
-const trackTop = 92;
-const trackGap = 148;
+const mobileQuery = window.matchMedia("(max-width: 980px)");
+
+const hAxisLeft = 110;
+const hAxisTop = 42;
+const hDateGap = 280;
+const hTrackTop = 92;
+const hTrackGap = 148;
+
+const vAxisTop = 48;
+const vAxisLeft = 86;
+const vDateGap = 150;
+const vTaskTopOffset = 42;
+const vTrackLeft = 250;
+const vTrackGap = 260;
+
 const boardMinWidth = 1700;
 const boardMinHeight = 820;
 
@@ -56,6 +66,7 @@ let boardRect = null;
 let contentWidth = boardMinWidth;
 let contentHeight = boardMinHeight;
 let maxTrack = 0;
+let currentMode = getLayoutMode();
 
 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -69,9 +80,16 @@ function todayISO() {
 
 function normalizeDate(value) {
   if (!value) return todayISO();
-  return value.slice(0, 10);
+  return String(value).slice(0, 10);
 }
 
+function getLayoutMode() {
+  return mobileQuery.matches ? "vertical" : "horizontal";
+}
+
+function isVerticalMode() {
+  return currentMode === "vertical";
+}\n
 function makeTask({ title, parentId = null, targetAt = todayISO(), status = "todo", branchMode = "same" }) {
   return {
     id: id(),
@@ -153,6 +171,7 @@ function scheduleSave() {
 
 function load() {
   const raw = localStorage.getItem(STORAGE_KEY)
+    || localStorage.getItem("quest-sticky-todo-v6")
     || localStorage.getItem("quest-sticky-todo-v5")
     || localStorage.getItem("quest-sticky-todo-v4")
     || localStorage.getItem("quest-sticky-todo-v3")
@@ -204,7 +223,7 @@ function getTaskDepth(taskId) {
 }
 
 function refreshLaneDates() {
-  const dates = new Set();
+  const dates = new Set([todayISO()]);
   for (const task of getTasks()) dates.add(normalizeDate(task.targetAt));
   cachedLaneDates = [...dates].sort((a, b) => a.localeCompare(b));
 }
@@ -220,32 +239,36 @@ function dateIndex(date) {
   return index >= 0 ? index : lanes.length;
 }
 
-function dateLineX(date) {
-  return axisLeft + dateIndex(date) * dateGap;
+function hDateLineX(date) {
+  return hAxisLeft + dateIndex(date) * hDateGap;
 }
 
-function dateToX(date) {
-  return dateLineX(date) + 34;
+function hDateToX(date) {
+  return hDateLineX(date) + 34;
 }
 
-function trackToY(track) {
-  return trackTop + track * trackGap;
+function hTrackToY(track) {
+  return hTrackTop + track * hTrackGap;
 }
 
-function lineXToDate(x) {
-  const lanes = getLaneDates();
-  if (!lanes.length) return todayISO();
+function vDateLineY(date) {
+  return vAxisTop + dateIndex(date) * vDateGap;
+}
 
-  let best = lanes[0];
-  let bestDist = Infinity;
-  for (const date of lanes) {
-    const dist = Math.abs(x - dateLineX(date));
-    if (dist < bestDist) {
-      best = date;
-      bestDist = dist;
-    }
-  }
-  return best;
+function vDateToY(date) {
+  return vDateLineY(date) + vTaskTopOffset;
+}
+
+function vTrackToX(track) {
+  return vTrackLeft + track * vTrackGap;
+}
+
+function taskX(task) {
+  return isVerticalMode() ? vTrackToX(task._track ?? 0) : hDateToX(task.targetAt);
+}
+
+function taskY(task) {
+  return isVerticalMode() ? vDateToY(task.targetAt) : hTrackToY(task._track ?? 0);
 }
 
 function formatDateParts(date) {
@@ -261,21 +284,43 @@ function updateMonthCard() {
   monthName.textContent = parts.monthName;
 }
 
+function activeTodayBandDate() {
+  const lanes = getLaneDates();
+  const today = todayISO();
+  if (!lanes.length) return today;
+  if (lanes.includes(today)) return today;
+
+  let result = lanes[0];
+  for (const date of lanes) {
+    if (date <= today) result = date;
+  }
+  return result;
+}
+
 function ensureContentSize() {
   refreshLaneDates();
+  currentMode = getLayoutMode();
+  board.classList.toggle("verticalMode", isVerticalMode());
+  board.classList.toggle("horizontalMode", !isVerticalMode());
 
   let farX = boardMinWidth;
   let farY = boardMinHeight;
   for (const task of getTasks()) {
-    if (!Number.isFinite(task.x)) task.x = dateToX(task.targetAt);
-    if (!Number.isFinite(task.y)) task.y = trackToY(0);
+    if (!Number.isFinite(task.x)) task.x = 0;
+    if (!Number.isFinite(task.y)) task.y = 0;
     farX = Math.max(farX, task.x + noteW + 220);
     farY = Math.max(farY, task.y + noteH + 180);
   }
 
-  const laneWidth = axisLeft + Math.max(5, getLaneDates().length) * dateGap + 360;
-  contentWidth = Math.max(boardMinWidth, farX, laneWidth);
-  contentHeight = Math.max(boardMinHeight, farY, trackToY(maxTrack + 2) + 180);
+  if (isVerticalMode()) {
+    const laneHeight = vAxisTop + Math.max(5, getLaneDates().length) * vDateGap + 230;
+    contentWidth = Math.max(boardMinWidth, farX, vTrackToX(maxTrack + 2) + noteW + 240);
+    contentHeight = Math.max(boardMinHeight, farY, laneHeight);
+  } else {
+    const laneWidth = hAxisLeft + Math.max(5, getLaneDates().length) * hDateGap + 360;
+    contentWidth = Math.max(boardMinWidth, farX, laneWidth);
+    contentHeight = Math.max(boardMinHeight, farY, hTrackToY(maxTrack + 2) + 180);
+  }
 
   [links, lanesEl, notesEl].forEach(el => {
     el.style.minWidth = `${contentWidth}px`;
@@ -300,46 +345,61 @@ function setObjectPos(el, x, y) {
   el.style.setProperty("--y", `${y}px`);
 }
 
-function hitTestDateArea(noteLeftX) {
+function hitTestDateArea(noteMainStart) {
   if (!state.showLanes) return { kind: "none", date: null };
 
   const lanes = getLaneDates();
   if (!lanes.length) return { kind: "blank", date: todayISO() };
 
-  const centerX = noteLeftX + noteW / 2;
+  if (isVerticalMode()) {
+    const centerY = noteMainStart + noteH / 2;
+    let nearestLine = null;
+    let nearestLineDistance = Infinity;
+
+    for (const date of lanes) {
+      const dist = Math.abs(centerY - vDateLineY(date));
+      if (dist < nearestLineDistance) {
+        nearestLineDistance = dist;
+        nearestLine = date;
+      }
+    }
+
+    if (nearestLineDistance <= 18) return { kind: "line", date: nearestLine };
+
+    for (let i = 0; i < lanes.length; i++) {
+      const top = vAxisTop + i * vDateGap;
+      const bottom = top + vDateGap;
+      if (centerY > top + 18 && centerY < bottom - 18) return { kind: "lane", date: lanes[i] };
+    }
+
+    return { kind: "blank", date: centerY >= vAxisTop + lanes.length * vDateGap ? lanes.at(-1) : lanes[0] };
+  }
+
+  const centerX = noteMainStart + noteW / 2;
   let nearestLine = null;
   let nearestLineDistance = Infinity;
 
   for (const date of lanes) {
-    const dist = Math.abs(centerX - dateLineX(date));
+    const dist = Math.abs(centerX - hDateLineX(date));
     if (dist < nearestLineDistance) {
       nearestLineDistance = dist;
       nearestLine = date;
     }
   }
 
-  if (nearestLineDistance <= 18) {
-    return { kind: "line", date: nearestLine };
-  }
+  if (nearestLineDistance <= 18) return { kind: "line", date: nearestLine };
 
   for (let i = 0; i < lanes.length; i++) {
-    const left = axisLeft + i * dateGap;
-    const right = left + dateGap;
-    if (centerX > left + 18 && centerX < right - 18) {
-      return { kind: "lane", date: lanes[i] };
-    }
+    const left = hAxisLeft + i * hDateGap;
+    const right = left + hDateGap;
+    if (centerX > left + 18 && centerX < right - 18) return { kind: "lane", date: lanes[i] };
   }
 
-  const lastRight = axisLeft + lanes.length * dateGap;
-  if (centerX >= lastRight - 18) {
-    return { kind: "blank", date: lanes[lanes.length - 1] };
-  }
-
-  return { kind: "blank", date: lanes[0] };
+  return { kind: "blank", date: centerX >= hAxisLeft + lanes.length * hDateGap ? lanes.at(-1) : lanes[0] };
 }
 
-function updateHotArea(x) {
-  const hit = hitTestDateArea(x);
+function updateHotArea(mainStart) {
+  const hit = hitTestDateArea(mainStart);
   const nextHotLane = hit.kind === "lane" ? hit.date : null;
   const nextHotLine = hit.kind === "line" ? hit.date : null;
   const changed = nextHotLane !== hotLaneDate || nextHotLine !== hotLineDate;
@@ -347,6 +407,14 @@ function updateHotArea(x) {
   hotLaneDate = nextHotLane;
   hotLineDate = nextHotLine;
   return changed;
+}
+
+function getDateForPointer(event) {
+  const point = boardPoint(event);
+  const hit = isVerticalMode()
+    ? hitTestDateArea(point.y - noteH / 2)
+    : hitTestDateArea(point.x - noteW / 2);
+  return hit.date || todayISO();
 }
 
 function requestRender() {
@@ -374,26 +442,41 @@ function renderLanes() {
 
   const fragment = document.createDocumentFragment();
   const lanes = getLaneDates();
+  const activeDate = activeTodayBandDate();
 
   lanes.forEach((date, index) => {
-    const x = axisLeft + index * dateGap;
+    const isTodayBand = date === activeDate;
+    const isTodayLine = date === todayISO();
+    const parts = formatDateParts(date);
 
     const band = document.createElement("div");
-    band.className = `laneBand ${index === 0 ? "first" : ""} ${hotLaneDate === date ? "highlight" : ""}`;
-    band.style.left = `${x}px`;
-    band.style.width = `${dateGap}px`;
-    fragment.appendChild(band);
+    band.className = `laneBand ${isTodayBand ? "todayBand" : ""} ${hotLaneDate === date ? "highlight" : ""}`;
 
     const line = document.createElement("div");
-    line.className = `laneLine ${hotLineDate === date ? "hot" : ""}`;
-    line.style.left = `${x}px`;
-    fragment.appendChild(line);
+    line.className = `laneLine ${isTodayLine ? "todayLine" : ""} ${hotLineDate === date ? "hot" : ""}`;
 
-    const parts = formatDateParts(date);
     const label = document.createElement("div");
-    label.className = "laneLabel";
-    label.style.left = `${x}px`;
+    label.className = `laneLabel ${isTodayLine ? "todayLabel" : ""}`;
     label.innerHTML = `<div class="laneDay">${parts.day}</div><div class="laneMonth">${parts.monthName}</div>`;
+
+    if (isVerticalMode()) {
+      const y = vAxisTop + index * vDateGap;
+      band.style.top = `${y}px`;
+      band.style.height = `${vDateGap}px`;
+      line.style.top = `${y}px`;
+      label.style.top = `${y + 10}px`;
+      label.style.left = "42px";
+    } else {
+      const x = hAxisLeft + index * hDateGap;
+      band.style.left = `${x}px`;
+      band.style.width = `${hDateGap}px`;
+      line.style.left = `${x}px`;
+      label.style.left = `${x + 16}px`;
+      label.style.top = "12px";
+    }
+
+    fragment.appendChild(band);
+    fragment.appendChild(line);
     fragment.appendChild(label);
   });
 
@@ -417,6 +500,34 @@ function renderLinks() {
 }
 
 function makeBranchPath(parent, child, color, width, dash) {
+  return isVerticalMode()
+    ? makeVerticalBranchPath(parent, child, color, width, dash)
+    : makeHorizontalBranchPath(parent, child, color, width, dash);
+}
+
+function makeVerticalBranchPath(parent, child, color, width, dash) {
+  const sameTrack = Math.abs(parent.x - child.x) < 6;
+  const sameDate = Math.abs(parent.y - child.y) < 6;
+  let d;
+
+  if (sameTrack) {
+    const x = parent.x + noteW / 2;
+    d = `M ${x} ${parent.y + noteH} L ${x} ${child.y}`;
+  } else if (sameDate) {
+    d = `M ${parent.x + noteW} ${parent.y + noteH / 2} L ${child.x} ${child.y + noteH / 2}`;
+  } else {
+    const x1 = parent.x + noteW / 2;
+    const y1 = parent.y + noteH;
+    const x2 = child.x + noteW / 2;
+    const y2 = child.y;
+    const trunkY = Math.min(y2 - 24, y1 + 28);
+    d = `M ${x1} ${y1} L ${x1} ${trunkY} L ${x2} ${trunkY} L ${x2} ${y2}`;
+  }
+
+  return makePath(d, color, width, dash);
+}
+
+function makeHorizontalBranchPath(parent, child, color, width, dash) {
   const sameTrack = Math.abs(parent.y - child.y) < 6;
   const sameDate = Math.abs(parent.x - child.x) < 6;
   let d;
@@ -425,9 +536,7 @@ function makeBranchPath(parent, child, color, width, dash) {
     d = `M ${parent.x + noteW} ${parent.y + noteH / 2} L ${child.x} ${child.y + noteH / 2}`;
   } else if (sameDate) {
     const x = parent.x + noteW / 2;
-    const y1 = parent.y + noteH;
-    const y2 = child.y;
-    d = `M ${x} ${y1} L ${x} ${y2}`;
+    d = `M ${x} ${parent.y + noteH} L ${x} ${child.y}`;
   } else {
     const x1 = parent.x + noteW;
     const y1 = parent.y + noteH / 2;
@@ -461,9 +570,14 @@ function ensurePreviewPath() {
   return previewPath;
 }
 
-function inferBranchMode(parent, pointerY) {
+function inferBranchMode(parent, point) {
+  if (isVerticalMode()) {
+    const parentCenter = parent.x + noteW / 2;
+    return Math.abs(point.x - parentCenter) < vTrackGap * 0.42 ? "same" : "branch";
+  }
+
   const parentCenter = parent.y + noteH / 2;
-  return Math.abs(pointerY - parentCenter) < trackGap * 0.42 ? "same" : "branch";
+  return Math.abs(point.y - parentCenter) < hTrackGap * 0.42 ? "same" : "branch";
 }
 
 function updatePreviewBranch() {
@@ -472,15 +586,28 @@ function updatePreviewBranch() {
   const parent = state.tasks[connectDrag.parentId];
   if (!parent) return;
 
-  const mode = inferBranchMode(parent, connectDrag.y);
-  const x1 = parent.x + noteW;
-  const y1 = parent.y + noteH / 2;
-  const x2 = connectDrag.x;
-  const y2 = mode === "same" ? y1 : connectDrag.y;
-  const trunkX = Math.min(x2 - 24, x1 + 28);
-  const d = mode === "same"
-    ? `M ${x1} ${y1} L ${x2} ${y1}`
-    : `M ${x1} ${y1} L ${trunkX} ${y1} L ${trunkX} ${y2} L ${x2} ${y2}`;
+  const mode = inferBranchMode(parent, connectDrag);
+  let d;
+
+  if (isVerticalMode()) {
+    const x1 = parent.x + noteW / 2;
+    const y1 = parent.y + noteH;
+    const x2 = mode === "same" ? x1 : connectDrag.x;
+    const y2 = connectDrag.y;
+    const trunkY = Math.min(y2 - 24, y1 + 28);
+    d = mode === "same"
+      ? `M ${x1} ${y1} L ${x1} ${y2}`
+      : `M ${x1} ${y1} L ${x1} ${trunkY} L ${x2} ${trunkY} L ${x2} ${y2}`;
+  } else {
+    const x1 = parent.x + noteW;
+    const y1 = parent.y + noteH / 2;
+    const x2 = connectDrag.x;
+    const y2 = mode === "same" ? y1 : connectDrag.y;
+    const trunkX = Math.min(x2 - 24, x1 + 28);
+    d = mode === "same"
+      ? `M ${x1} ${y1} L ${x2} ${y1}`
+      : `M ${x1} ${y1} L ${trunkX} ${y1} L ${trunkX} ${y2} L ${x2} ${y2}`;
+  }
 
   ensurePreviewPath().setAttribute("d", d);
 }
@@ -516,7 +643,7 @@ function renderNotes() {
     const handle = document.createElement("div");
     handle.className = "handle";
     handle.textContent = "+";
-    handle.title = "右へ引くと同じブランチ / 下へずらすと分岐";
+    handle.title = isVerticalMode() ? "タップで同じブランチに追加" : "右へ引くと同じブランチ / 下へずらすと分岐";
     handle.addEventListener("pointerdown", onHandlePointerDown);
     el.appendChild(handle);
 
@@ -578,11 +705,7 @@ function onHandlePointerDown(event) {
   const p = boardPoint(event);
 
   setSelected(parentId);
-  connectDrag = {
-    parentId,
-    x: p.x,
-    y: p.y
-  };
+  connectDrag = { parentId, x: p.x, y: p.y };
 
   ghost.classList.remove("hidden");
   setObjectPos(ghost, p.x - noteW / 2, p.y - noteH / 2);
@@ -596,15 +719,14 @@ window.addEventListener("pointermove", event => {
     const task = state.tasks[drag.id];
     const p = boardPoint(event);
 
-    task.x = Math.max(axisLeft - 20, p.x - drag.dx);
-    task.y = Math.max(axisTop + 30, p.y - drag.dy);
+    task.x = Math.max(40, p.x - drag.dx);
+    task.y = Math.max(30, p.y - drag.dy);
     drag.moved = true;
 
     setObjectPos(drag.el, task.x, task.y);
 
-    if (updateHotArea(task.x)) {
-      renderLanes();
-    }
+    const mainStart = isVerticalMode() ? task.y : task.x;
+    if (updateHotArea(mainStart)) renderLanes();
   }
 
   if (connectDrag) {
@@ -614,7 +736,9 @@ window.addEventListener("pointermove", event => {
     connectDrag.x = p.x;
     connectDrag.y = p.y;
 
-    const hit = hitTestDateArea(p.x - noteW / 2);
+    const hit = isVerticalMode()
+      ? hitTestDateArea(p.y - noteH / 2)
+      : hitTestDateArea(p.x - noteW / 2);
     const nextHotLane = hit.kind === "lane" ? hit.date : null;
     const nextHotLine = hit.kind === "line" ? hit.date : null;
     const hotChanged = nextHotLane !== hotLaneDate || nextHotLine !== hotLineDate;
@@ -622,12 +746,19 @@ window.addEventListener("pointermove", event => {
     hotLaneDate = nextHotLane;
     hotLineDate = nextHotLine;
 
-    const mode = inferBranchMode(parent, p.y);
+    const mode = inferBranchMode(parent, p);
     let gx = p.x - noteW / 2;
-    if (hit.kind === "lane") gx = dateToX(hit.date);
-    const gy = mode === "same" ? parent.y : Math.max(trackTop, p.y - noteH / 2);
+    let gy = p.y - noteH / 2;
 
-    setObjectPos(ghost, Math.max(axisLeft - 20, gx), Math.max(axisTop + 30, gy));
+    if (isVerticalMode()) {
+      if (hit.kind === "lane") gy = vDateToY(hit.date);
+      if (mode === "same") gx = parent.x;
+    } else {
+      if (hit.kind === "lane") gx = hDateToX(hit.date);
+      if (mode === "same") gy = parent.y;
+    }
+
+    setObjectPos(ghost, Math.max(40, gx), Math.max(30, gy));
     updatePreviewBranch();
 
     if (hotChanged) renderLanes();
@@ -640,12 +771,13 @@ window.addEventListener("pointerup", () => {
     const currentDrag = drag;
 
     if (drag.moved) {
-      const hit = hitTestDateArea(task.x);
+      const hit = isVerticalMode() ? hitTestDateArea(task.y) : hitTestDateArea(task.x);
       snapshot();
 
       if (state.showLanes && hit.kind === "lane") {
         task.targetAt = hit.date;
-        task.x = dateToX(hit.date);
+        if (isVerticalMode()) task.y = vDateToY(hit.date);
+        else task.x = hDateToX(hit.date);
         drag = null;
         finishDragUI(currentDrag);
         requestRender();
@@ -666,9 +798,11 @@ window.addEventListener("pointerup", () => {
 
   if (connectDrag) {
     const parent = state.tasks[connectDrag.parentId];
-    const hit = hitTestDateArea(connectDrag.x - noteW / 2);
+    const hit = isVerticalMode()
+      ? hitTestDateArea(connectDrag.y - noteH / 2)
+      : hitTestDateArea(connectDrag.x - noteW / 2);
     const defaultDate = hit.kind === "lane" ? hit.date : todayISO();
-    const branchMode = inferBranchMode(parent, connectDrag.y);
+    const branchMode = inferBranchMode(parent, connectDrag);
     const parentId = connectDrag.parentId;
 
     connectDrag = null;
@@ -679,11 +813,7 @@ window.addEventListener("pointerup", () => {
     hotLineDate = null;
     renderLanes();
 
-    openCreateTaskModal({
-      parentId,
-      targetAt: defaultDate,
-      branchMode
-    });
+    openCreateTaskModal({ parentId, targetAt: defaultDate, branchMode });
   }
 });
 
@@ -760,13 +890,7 @@ function saveTaskModal() {
       ? getSameBranchTail(taskModalContext.parentId, targetAt)
       : taskModalContext.parentId;
 
-    const task = makeTask({
-      title,
-      parentId,
-      targetAt,
-      branchMode
-    });
-
+    const task = makeTask({ title, parentId, targetAt, branchMode });
     state.tasks[task.id] = task;
     selectedId = task.id;
   }
@@ -818,16 +942,13 @@ function saveDateModal() {
   if (!dateModalContext) return;
 
   const task = state.tasks[dateModalContext.taskId];
-  if (task) {
-    task.targetAt = normalizeDate(changeDateInput.value);
-    refreshLaneDates();
-    task.x = dateToX(task.targetAt);
-  }
+  if (task) task.targetAt = normalizeDate(changeDateInput.value);
 
   dateModal.classList.add("hidden");
   dateModalContext = null;
   hotLaneDate = null;
   hotLineDate = null;
+  branchLayout();
   requestRender();
 }
 
@@ -848,6 +969,7 @@ function orderChildrenForLayout(taskId) {
 
 function branchLayout() {
   refreshLaneDates();
+  currentMode = getLayoutMode();
 
   const roots = getRoots().sort(sortByDateThenTitle);
   let nextTrack = 0;
@@ -927,8 +1049,8 @@ function applyTracksToPositions() {
   for (const task of getTasks()) {
     const track = Number.isFinite(task._track) ? task._track : 0;
     maxTrack = Math.max(maxTrack, track);
-    task.x = dateToX(task.targetAt);
-    task.y = trackToY(track);
+    task.x = taskX(task);
+    task.y = taskY(task);
   }
 }
 
@@ -1012,9 +1134,13 @@ dateModal.addEventListener("pointerdown", event => {
 });
 
 board.addEventListener("pointerdown", event => {
-  if (event.target === board || event.target === notesEl || event.target === lanesEl) {
-    setSelected(null);
-  }
+  if (event.target === board || event.target === notesEl || event.target === lanesEl) setSelected(null);
+});
+
+mobileQuery.addEventListener("change", () => {
+  currentMode = getLayoutMode();
+  branchLayout();
+  requestRender();
 });
 
 window.addEventListener("beforeunload", saveNow);
