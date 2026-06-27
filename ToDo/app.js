@@ -1,4 +1,4 @@
-const STORAGE_KEY = "quest-sticky-todo-v8";
+const STORAGE_KEY = "quest-sticky-todo-v9";
 
 const board = document.getElementById("board");
 const links = document.getElementById("links");
@@ -12,6 +12,7 @@ const verticalLayoutBtn = document.getElementById("verticalLayoutBtn");
 const toggleLanesBtn = document.getElementById("toggleLanesBtn");
 const undoBtn = document.getElementById("undoBtn");
 const resetBtn = document.getElementById("resetBtn");
+const deleteBtn = document.getElementById("deleteBtn");
 
 const monthBig = document.getElementById("monthBig");
 const monthName = document.getElementById("monthName");
@@ -33,13 +34,11 @@ const noteH = 104;
 const mobileQuery = window.matchMedia("(max-width: 980px)");
 
 const hAxisLeft = 110;
-const hAxisTop = 42;
 const hDateGap = 280;
 const hTrackTop = 92;
 const hTrackGap = 148;
 
 const vAxisTop = 48;
-const vAxisLeft = 86;
 const vDateGap = 150;
 const vTaskTopOffset = 42;
 const vTrackLeft = 250;
@@ -89,7 +88,8 @@ function getLayoutMode() {
 
 function isVerticalMode() {
   return currentMode === "vertical";
-}\n
+}
+
 function makeTask({ title, parentId = null, targetAt = todayISO(), status = "todo", branchMode = "same" }) {
   return {
     id: id(),
@@ -104,60 +104,12 @@ function makeTask({ title, parentId = null, targetAt = todayISO(), status = "tod
 }
 
 function makeInitialState() {
-  const root = {
-    id: "root",
-    title: "数IIIテスト勉強",
-    parentId: null,
-    x: 0,
-    y: 0,
-    targetAt: "2026-05-05",
-    status: "todo",
-    branchMode: null
-  };
-  const a = {
-    id: "a",
-    title: "ワーク１２ページ",
-    parentId: "root",
-    x: 0,
-    y: 0,
-    targetAt: "2026-05-12",
-    status: "todo",
-    branchMode: "same"
-  };
-  const b = {
-    id: "b",
-    title: "基礎演習２ページ",
-    parentId: "root",
-    x: 0,
-    y: 0,
-    targetAt: "2026-05-12",
-    status: "todo",
-    branchMode: "branch"
-  };
-  const c = {
-    id: "c",
-    title: "ワーク１３ページ",
-    parentId: "a",
-    x: 0,
-    y: 0,
-    targetAt: "2026-05-15",
-    status: "todo",
-    branchMode: "same"
-  };
-  const d = {
-    id: "d",
-    title: "基礎演習３ページ",
-    parentId: "b",
-    x: 0,
-    y: 0,
-    targetAt: "2026-05-18",
-    status: "todo",
-    branchMode: "same"
-  };
-  return {
-    tasks: { root, a, b, c, d },
-    showLanes: true
-  };
+  const root = { id: "root", title: "数IIIテスト勉強", parentId: null, x: 0, y: 0, targetAt: "2026-05-05", status: "todo", branchMode: null };
+  const a = { id: "a", title: "ワーク１２ページ", parentId: "root", x: 0, y: 0, targetAt: "2026-05-12", status: "todo", branchMode: "same" };
+  const b = { id: "b", title: "基礎演習２ページ", parentId: "root", x: 0, y: 0, targetAt: "2026-05-12", status: "todo", branchMode: "branch" };
+  const c = { id: "c", title: "ワーク１３ページ", parentId: "a", x: 0, y: 0, targetAt: "2026-05-15", status: "todo", branchMode: "same" };
+  const d = { id: "d", title: "基礎演習３ページ", parentId: "b", x: 0, y: 0, targetAt: "2026-05-18", status: "todo", branchMode: "same" };
+  return { tasks: { root, a, b, c, d }, showLanes: true };
 }
 
 function saveNow() {
@@ -171,6 +123,7 @@ function scheduleSave() {
 
 function load() {
   const raw = localStorage.getItem(STORAGE_KEY)
+    || localStorage.getItem("quest-sticky-todo-v8")
     || localStorage.getItem("quest-sticky-todo-v6")
     || localStorage.getItem("quest-sticky-todo-v5")
     || localStorage.getItem("quest-sticky-todo-v4")
@@ -234,9 +187,8 @@ function getLaneDates() {
 }
 
 function dateIndex(date) {
-  const lanes = getLaneDates();
-  const index = lanes.indexOf(normalizeDate(date));
-  return index >= 0 ? index : lanes.length;
+  const index = getLaneDates().indexOf(normalizeDate(date));
+  return index >= 0 ? index : getLaneDates().length;
 }
 
 function hDateLineX(date) {
@@ -245,6 +197,10 @@ function hDateLineX(date) {
 
 function hDateToX(date) {
   return hDateLineX(date) + 34;
+}
+
+function hEndLineX() {
+  return hAxisLeft + getLaneDates().length * hDateGap;
 }
 
 function hTrackToY(track) {
@@ -257,6 +213,10 @@ function vDateLineY(date) {
 
 function vDateToY(date) {
   return vDateLineY(date) + vTaskTopOffset;
+}
+
+function vEndLineY() {
+  return vAxisTop + getLaneDates().length * vDateGap;
 }
 
 function vTrackToX(track) {
@@ -276,9 +236,12 @@ function formatDateParts(date) {
   return { year, month, day, monthName: monthNames[month - 1] || "" };
 }
 
+function sameMonth(a, b) {
+  return normalizeDate(a).slice(0, 7) === normalizeDate(b).slice(0, 7);
+}
+
 function updateMonthCard() {
-  const lanes = getLaneDates();
-  const first = lanes[0] || todayISO();
+  const first = getLaneDates()[0] || todayISO();
   const parts = formatDateParts(first);
   monthBig.textContent = String(parts.month);
   monthName.textContent = parts.monthName;
@@ -352,12 +315,12 @@ function hitTestDateArea(noteMainStart) {
   if (!lanes.length) return { kind: "blank", date: todayISO() };
 
   if (isVerticalMode()) {
-    const centerY = noteMainStart + noteH / 2;
+    const anchorY = noteMainStart + 20;
     let nearestLine = null;
     let nearestLineDistance = Infinity;
 
     for (const date of lanes) {
-      const dist = Math.abs(centerY - vDateLineY(date));
+      const dist = Math.abs(anchorY - vDateLineY(date));
       if (dist < nearestLineDistance) {
         nearestLineDistance = dist;
         nearestLine = date;
@@ -367,20 +330,21 @@ function hitTestDateArea(noteMainStart) {
     if (nearestLineDistance <= 18) return { kind: "line", date: nearestLine };
 
     for (let i = 0; i < lanes.length; i++) {
-      const top = vAxisTop + i * vDateGap;
-      const bottom = top + vDateGap;
-      if (centerY > top + 18 && centerY < bottom - 18) return { kind: "lane", date: lanes[i] };
+      const top = vAxisTop + i * vDateGap - 28;
+      const bottom = vAxisTop + (i + 1) * vDateGap - 28;
+      if (anchorY >= top && anchorY < bottom) return { kind: "lane", date: lanes[i] };
     }
 
-    return { kind: "blank", date: centerY >= vAxisTop + lanes.length * vDateGap ? lanes.at(-1) : lanes[0] };
+    if (anchorY >= vEndLineY() - 28) return { kind: "blank", date: lanes.at(-1) };
+    return { kind: "lane", date: lanes[0] };
   }
 
-  const centerX = noteMainStart + noteW / 2;
+  const anchorX = noteMainStart + 20;
   let nearestLine = null;
   let nearestLineDistance = Infinity;
 
   for (const date of lanes) {
-    const dist = Math.abs(centerX - hDateLineX(date));
+    const dist = Math.abs(anchorX - hDateLineX(date));
     if (dist < nearestLineDistance) {
       nearestLineDistance = dist;
       nearestLine = date;
@@ -390,12 +354,13 @@ function hitTestDateArea(noteMainStart) {
   if (nearestLineDistance <= 18) return { kind: "line", date: nearestLine };
 
   for (let i = 0; i < lanes.length; i++) {
-    const left = hAxisLeft + i * hDateGap;
-    const right = left + hDateGap;
-    if (centerX > left + 18 && centerX < right - 18) return { kind: "lane", date: lanes[i] };
+    const left = hAxisLeft + i * hDateGap - 28;
+    const right = hAxisLeft + (i + 1) * hDateGap - 28;
+    if (anchorX >= left && anchorX < right) return { kind: "lane", date: lanes[i] };
   }
 
-  return { kind: "blank", date: centerX >= hAxisLeft + lanes.length * hDateGap ? lanes.at(-1) : lanes[0] };
+  if (anchorX >= hEndLineX() - 28) return { kind: "blank", date: lanes.at(-1) };
+  return { kind: "lane", date: lanes[0] };
 }
 
 function updateHotArea(mainStart) {
@@ -431,6 +396,7 @@ function render() {
   scheduleSave();
   updateMonthCard();
   toggleLanesBtn.textContent = `日付レーン ${state.showLanes ? "ON" : "OFF"}`;
+  if (deleteBtn) deleteBtn.disabled = !selectedId;
   renderLanes();
   renderLinks();
   renderNotes();
@@ -445,6 +411,8 @@ function renderLanes() {
   const activeDate = activeTodayBandDate();
 
   lanes.forEach((date, index) => {
+    const prev = lanes[index - 1];
+    const isMonthStart = index === 0 || !sameMonth(prev, date);
     const isTodayBand = date === activeDate;
     const isTodayLine = date === todayISO();
     const parts = formatDateParts(date);
@@ -456,22 +424,24 @@ function renderLanes() {
     line.className = `laneLine ${isTodayLine ? "todayLine" : ""} ${hotLineDate === date ? "hot" : ""}`;
 
     const label = document.createElement("div");
-    label.className = `laneLabel ${isTodayLine ? "todayLabel" : ""}`;
-    label.innerHTML = `<div class="laneDay">${parts.day}</div><div class="laneMonth">${parts.monthName}</div>`;
+    label.className = `laneLabel ${isTodayLine ? "todayLabel" : ""} ${isMonthStart ? "monthStart" : ""}`;
+    label.innerHTML = isMonthStart
+      ? `<div class="laneMonthMarker">${parts.monthName}</div><div class="laneDay">${parts.day}</div>`
+      : `<div class="laneDay">${parts.day}</div><div class="laneMonth">${parts.monthName}</div>`;
 
     if (isVerticalMode()) {
       const y = vAxisTop + index * vDateGap;
       band.style.top = `${y}px`;
       band.style.height = `${vDateGap}px`;
       line.style.top = `${y}px`;
-      label.style.top = `${y + 10}px`;
+      label.style.top = `${y + 8}px`;
       label.style.left = "42px";
     } else {
       const x = hAxisLeft + index * hDateGap;
       band.style.left = `${x}px`;
       band.style.width = `${hDateGap}px`;
       line.style.left = `${x}px`;
-      label.style.left = `${x + 16}px`;
+      label.style.left = `${x + 14}px`;
       label.style.top = "12px";
     }
 
@@ -479,6 +449,12 @@ function renderLanes() {
     fragment.appendChild(line);
     fragment.appendChild(label);
   });
+
+  const endLine = document.createElement("div");
+  endLine.className = "laneLine laneEndLine";
+  if (isVerticalMode()) endLine.style.top = `${vEndLineY()}px`;
+  else endLine.style.left = `${hEndLineX()}px`;
+  fragment.appendChild(endLine);
 
   lanesEl.appendChild(fragment);
 }
@@ -627,6 +603,17 @@ function renderNotes() {
     text.textContent = task.title;
     el.appendChild(text);
 
+    const deleteControl = document.createElement("div");
+    deleteControl.className = "deleteBtn";
+    deleteControl.textContent = "×";
+    deleteControl.title = "削除";
+    deleteControl.addEventListener("pointerdown", event => event.stopPropagation());
+    deleteControl.addEventListener("click", event => {
+      event.stopPropagation();
+      deleteTask(task.id);
+    });
+    el.appendChild(deleteControl);
+
     const done = document.createElement("div");
     done.className = "doneBtn";
     done.textContent = task.status === "done" ? "✓" : "○";
@@ -671,10 +658,12 @@ function setSelected(id) {
     const el = notesEl.querySelector(`[data-id="${selectedId}"]`);
     if (el) el.classList.add("selected");
   }
+
+  if (deleteBtn) deleteBtn.disabled = !selectedId;
 }
 
 function onNotePointerDown(event) {
-  if (event.target.classList.contains("handle") || event.target.classList.contains("doneBtn")) return;
+  if (event.target.classList.contains("handle") || event.target.classList.contains("doneBtn") || event.target.classList.contains("deleteBtn")) return;
 
   startPointerSession();
   const taskId = event.currentTarget.dataset.id;
@@ -780,6 +769,7 @@ window.addEventListener("pointerup", () => {
         else task.x = hDateToX(hit.date);
         drag = null;
         finishDragUI(currentDrag);
+        branchLayout();
         requestRender();
       } else if (state.showLanes && (hit.kind === "line" || hit.kind === "blank")) {
         drag = null;
@@ -1058,6 +1048,28 @@ function deleteTempTracks() {
   for (const task of getTasks()) delete task._track;
 }
 
+function deleteTask(taskId = selectedId) {
+  const task = state.tasks[taskId];
+  if (!task) return;
+
+  snapshot();
+
+  const parentId = task.parentId || null;
+  const children = getChildren(taskId).sort(sortByDateThenTitle);
+
+  children.forEach((child, index) => {
+    child.parentId = parentId;
+    child.branchMode = parentId ? (index === 0 ? (child.branchMode || "same") : "branch") : null;
+  });
+
+  delete state.tasks[taskId];
+  selectedId = parentId && state.tasks[parentId] ? parentId : null;
+
+  refreshLaneDates();
+  branchLayout();
+  requestRender();
+}
+
 function verticalLayoutBranches() {
   branchLayout();
 }
@@ -1108,6 +1120,10 @@ resetBtn.addEventListener("click", () => {
   requestRender();
 });
 
+if (deleteBtn) {
+  deleteBtn.addEventListener("click", () => deleteTask(selectedId));
+}
+
 taskCancelBtn.addEventListener("click", closeTaskModal);
 taskSaveBtn.addEventListener("click", saveTaskModal);
 dateCancelBtn.addEventListener("click", () => closeDateModal({ restore: true }));
@@ -1135,6 +1151,21 @@ dateModal.addEventListener("pointerdown", event => {
 
 board.addEventListener("pointerdown", event => {
   if (event.target === board || event.target === notesEl || event.target === lanesEl) setSelected(null);
+});
+
+window.addEventListener("keydown", event => {
+  const tag = document.activeElement?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+  if ((event.key === "Delete" || event.key === "Backspace") && selectedId) {
+    event.preventDefault();
+    deleteTask(selectedId);
+  }
+
+  if (event.key === "Escape" && selectedId) {
+    event.preventDefault();
+    setSelected(null);
+  }
 });
 
 mobileQuery.addEventListener("change", () => {
