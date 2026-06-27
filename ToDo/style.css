@@ -80,17 +80,8 @@ button.ghostBtn { background: #e7eaf2; color: #222937; box-shadow: none; }
   box-shadow: inset 0 0 0 2px rgba(0,0,0,.12);
 }
 
-h1 {
-  margin: 0;
-  font-size: 18px;
-  line-height: 1.1;
-}
-
-p {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-}
+h1 { margin: 0; font-size: 18px; line-height: 1.1; }
+p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
 
 .toolbar {
   display: flex;
@@ -100,11 +91,7 @@ p {
   justify-content: flex-end;
 }
 
-.stage {
-  position: relative;
-  padding: 0 18px 18px;
-  overflow: hidden;
-}
+.stage { position: relative; padding: 0 18px 18px; overflow: hidden; }
 
 .stageHeader {
   height: 82px;
@@ -113,27 +100,10 @@ p {
   gap: 24px;
 }
 
-.monthCard {
-  width: 72px;
-  text-align: center;
-}
-
-#monthBig {
-  font-size: 58px;
-  line-height: 48px;
-  letter-spacing: -4px;
-}
-
-#monthName {
-  font-size: 19px;
-  margin-top: 8px;
-}
-
-.help {
-  margin-bottom: 16px;
-  color: var(--muted);
-  font-size: 13px;
-}
+.monthCard { width: 72px; text-align: center; }
+#monthBig { font-size: 58px; line-height: 48px; letter-spacing: -4px; }
+#monthName { font-size: 19px; margin-top: 8px; }
+.help { margin-bottom: 16px; color: var(--muted); font-size: 13px; }
 
 .board {
   position: relative;
@@ -146,11 +116,13 @@ p {
   outline: 1px solid rgba(0,0,0,.07);
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y;
+  --note-w: 220px;
+  --note-h: 104px;
 }
 
 .board.grabbing { cursor: grabbing; }
 
-.links, .lanes, .notes {
+.links, .lanes, .dateHud, .notes {
   position: absolute;
   left: 0;
   top: 0;
@@ -158,49 +130,17 @@ p {
   min-height: 820px;
 }
 
-.links {
-  z-index: 2;
-  pointer-events: none;
-  overflow: visible;
-}
+.links { z-index: 2; pointer-events: none; overflow: visible; }
+.lanes { z-index: 1; pointer-events: none; }
+.dateHud { z-index: 4; pointer-events: none; }
+.notes { z-index: 3; }
 
-.lanes {
-  z-index: 1;
-  pointer-events: none;
-}
-
-.notes {
-  z-index: 3;
-}
-
-.laneBand {
-  position: absolute;
-  background: transparent;
-}
-
-.horizontalMode .laneBand {
-  top: 0;
-  bottom: 0;
-  width: 280px;
-}
-
-.verticalMode .laneBand {
-  left: 0;
-  right: 0;
-  height: 150px;
-}
-
-.laneBand.todayBand {
-  background: var(--today);
-}
-
-.laneBand.highlight {
-  background: rgba(115, 87, 255, .12);
-}
-
-.laneBand.todayBand.highlight {
-  background: linear-gradient(0deg, rgba(115,87,255,.10), rgba(115,87,255,.10)), var(--today);
-}
+.laneBand { position: absolute; background: transparent; }
+.horizontalMode .laneBand { top: 0; bottom: 0; width: 280px; }
+.verticalMode .laneBand { left: 0; right: 0; height: 124px; }
+.laneBand.todayBand { background: var(--today); }
+.laneBand.highlight { background: rgba(115, 87, 255, .12); }
+.laneBand.todayBand.highlight { background: linear-gradient(0deg, rgba(115,87,255,.10), rgba(115,87,255,.10)), var(--today); }
 
 .laneLine {
   position: absolute;
@@ -208,60 +148,32 @@ p {
   background: var(--line);
 }
 
-.horizontalMode .laneLine {
-  top: 42px;
-  bottom: 40px;
-  width: 3px;
-}
-
-.verticalMode .laneLine {
-  left: 86px;
-  right: 40px;
-  height: 3px;
-}
-
-.laneLine.hot {
-  background: var(--accent);
-}
-
+.horizontalMode .laneLine { top: 42px; bottom: 40px; width: 3px; }
+.verticalMode .laneLine { left: 86px; right: 40px; height: 3px; }
+.laneLine.hot { background: var(--accent); }
 .horizontalMode .laneLine.hot { width: 5px; }
 .verticalMode .laneLine.hot { height: 5px; }
-
-.laneLine.todayLine {
-  background: var(--today-strong);
-}
-
-.laneLine.laneEndLine {
-  background: #b9c0ca;
-  opacity: .9;
-}
+.laneLine.todayLine { background: var(--today-strong); }
+.laneLine.laneEndLine { background: #b9c0ca; opacity: .9; }
 
 .laneLabel {
   position: absolute;
   text-align: left;
   color: #111827;
+  pointer-events: none;
+  z-index: 5;
+  padding: 3px 6px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.82);
+  box-shadow: 0 4px 14px rgba(255,255,255,.55);
+  backdrop-filter: blur(2px);
 }
 
-.horizontalMode .laneLabel {
-  width: 78px;
-}
+.horizontalMode .laneLabel { width: 78px; }
+.verticalMode .laneLabel { width: 70px; }
 
-.verticalMode .laneLabel {
-  width: 70px;
-  transform: translateY(-2px);
-}
-
-.laneDay {
-  font-size: 31px;
-  line-height: 29px;
-  letter-spacing: -1px;
-}
-
-.laneMonth {
-  margin-top: 2px;
-  font-size: 12px;
-  color: var(--muted);
-}
+.laneDay { font-size: 31px; line-height: 29px; letter-spacing: -1px; }
+.laneMonth { margin-top: 2px; font-size: 12px; color: var(--muted); }
 
 .laneMonthMarker {
   display: inline-block;
@@ -274,16 +186,14 @@ p {
   font-weight: 700;
 }
 
-.laneLabel.todayLabel .laneDay {
-  color: #147985;
-}
+.laneLabel.todayLabel .laneDay { color: #147985; }
 
 .note {
   position: absolute;
   left: 0;
   top: 0;
-  width: 220px;
-  min-height: 104px;
+  width: var(--note-w, 220px);
+  min-height: var(--note-h, 104px);
   padding: 16px 16px 24px;
   display: flex;
   align-items: center;
@@ -302,31 +212,11 @@ p {
   touch-action: none;
 }
 
-.note:hover {
-  box-shadow: 0 7px 0 rgba(0,0,0,.08), 0 14px 24px rgba(0,0,0,.14);
-}
-
-.note.selected {
-  outline: 3px solid var(--accent);
-  outline-offset: 5px;
-}
-
-.note.dragging {
-  --scale: 1.02;
-  opacity: .86;
-  cursor: grabbing;
-  z-index: 50;
-}
-
-.note.done {
-  opacity: .55;
-}
-
-.noteText {
-  font-size: 22px;
-  line-height: 1.25;
-  word-break: break-word;
-}
+.note:hover { box-shadow: 0 7px 0 rgba(0,0,0,.08), 0 14px 24px rgba(0,0,0,.14); }
+.note.selected { outline: 3px solid var(--accent); outline-offset: 5px; }
+.note.dragging { --scale: 1.02; opacity: .86; cursor: grabbing; z-index: 50; }
+.note.done { opacity: .55; }
+.noteText { font-size: 22px; line-height: 1.25; word-break: break-word; }
 
 .handle, .doneBtn, .deleteBtn {
   position: absolute;
@@ -382,27 +272,16 @@ p {
 }
 
 .doneBtn { right: -11px; }
-.deleteBtn { left: -11px; }
-
-.deleteBtn {
-  color: white;
-  background: #ef4444;
-  border-color: #7f1d1d;
-}
-
-.done .doneBtn {
-  opacity: 1;
-  pointer-events: auto;
-  background: #dfffe7;
-}
+.deleteBtn { left: -11px; color: white; background: #ef4444; border-color: #7f1d1d; }
+.done .doneBtn { opacity: 1; pointer-events: auto; background: #dfffe7; }
 
 .ghost {
   position: absolute;
   left: 0;
   top: 0;
   z-index: 30;
-  width: 220px;
-  height: 104px;
+  width: var(--note-w, 220px);
+  height: var(--note-h, 104px);
   padding: 16px;
   display: grid;
   place-items: center;
@@ -436,57 +315,18 @@ p {
   animation: pop .10s ease-out;
 }
 
-.smallModal {
-  width: min(380px, calc(100vw - 32px));
-}
-
-@keyframes pop {
-  from { transform: translateY(6px) scale(.99); opacity: 0; }
-  to { transform: translateY(0) scale(1); opacity: 1; }
-}
-
-.modal h2 {
-  margin: 0 0 14px;
-  font-size: 20px;
-}
-
-.modal label {
-  display: grid;
-  gap: 7px;
-  color: var(--muted);
-  font-size: 13px;
-  margin-bottom: 14px;
-}
-
-.modal input {
-  width: 100%;
-  border: 1px solid rgba(0,0,0,.16);
-  border-radius: 12px;
-  padding: 11px 12px;
-  background: #fbfcff;
-  color: var(--ink);
-}
-
-.modalText {
-  margin: 0 0 14px;
-  line-height: 1.6;
-}
-
-.modalActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 6px;
-}
+.smallModal { width: min(380px, calc(100vw - 32px)); }
+@keyframes pop { from { transform: translateY(6px) scale(.99); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+.modal h2 { margin: 0 0 14px; font-size: 20px; }
+.modal label { display: grid; gap: 7px; color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+.modal input { width: 100%; border: 1px solid rgba(0,0,0,.16); border-radius: 12px; padding: 11px 12px; background: #fbfcff; color: var(--ink); }
+.modalText { margin: 0 0 14px; line-height: 1.6; }
+.modalActions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 6px; }
 
 @media (max-width: 980px) {
   body { overflow: hidden; }
 
-  .app {
-    height: 100dvh;
-    min-height: 100dvh;
-    grid-template-rows: auto 1fr;
-  }
+  .app { height: 100dvh; min-height: 100dvh; grid-template-rows: auto 1fr; }
 
   .topbar {
     align-items: stretch;
@@ -496,18 +336,8 @@ p {
     position: relative;
   }
 
-  .brand {
-    min-width: 0;
-    gap: 9px;
-  }
-
-  .logo {
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
-    font-size: 22px;
-  }
-
+  .brand { min-width: 0; gap: 9px; }
+  .logo { width: 38px; height: 38px; border-radius: 12px; font-size: 22px; }
   .brand h1 { font-size: 18px; }
   .brand p { font-size: 12px; }
 
@@ -524,50 +354,25 @@ p {
   }
 
   .toolbar::-webkit-scrollbar { display: none; }
+  .toolbar button { font-size: 14px; padding: 8px 12px; min-height: 38px; box-shadow: 0 4px 10px rgba(0,0,0,.12); }
 
-  .toolbar button {
-    font-size: 14px;
-    padding: 8px 12px;
-    min-height: 38px;
-    box-shadow: 0 4px 10px rgba(0,0,0,.12);
-  }
-
-  .stage {
-    padding: 0 6px 8px;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .stageHeader {
-    height: 56px;
-    align-items: center;
-    gap: 10px;
-  }
-
+  .stage { padding: 0 6px 8px; min-height: 0; overflow: hidden; }
+  .stageHeader { height: 52px; align-items: center; gap: 10px; }
   .monthCard { width: 50px; }
   .help { display: none; }
+  #monthBig { font-size: 44px; line-height: 36px; letter-spacing: -3px; }
+  #monthName { font-size: 15px; margin-top: 5px; }
 
-  #monthBig {
-    font-size: 46px;
-    line-height: 38px;
-    letter-spacing: -3px;
-  }
+  .board { height: calc(100dvh - 172px); min-height: 420px; border-radius: 16px; }
+  .verticalMode .laneLine { left: 78px; right: 28px; }
+  .verticalMode .laneBand { height: 124px; }
+  .verticalMode .laneLabel { width: 58px; padding: 2px 5px; }
+  .verticalMode .laneDay { font-size: 24px; line-height: 23px; }
+  .verticalMode .laneMonth { font-size: 10px; }
+  .verticalMode .laneMonthMarker { font-size: 10px; padding: 1px 5px; }
 
-  #monthName {
-    font-size: 16px;
-    margin-top: 6px;
-  }
-
-  .board {
-    height: calc(100dvh - 176px);
-    min-height: 420px;
-    border-radius: 16px;
-  }
-
-  .note {
-    width: 220px;
-    min-height: 104px;
-  }
+  .note { padding: 12px 12px 18px; }
+  .noteText { font-size: 18px; line-height: 1.2; }
 
   .handle {
     opacity: 1;
@@ -578,25 +383,10 @@ p {
     font-size: 20px;
   }
 
-  .doneBtn, .deleteBtn {
-    opacity: 1;
-    pointer-events: auto;
-    width: 32px;
-    height: 32px;
-  }
+  .doneBtn, .deleteBtn { opacity: 1; pointer-events: auto; width: 32px; height: 32px; }
+  .deleteBtn { left: -16px; }
 
-  .deleteBtn {
-    left: -16px;
-  }
-
-  .modal {
-    width: calc(100vw - 28px);
-    padding: 18px;
-    border-radius: 18px;
-  }
-
-  .modalActions button {
-    font-size: 14px;
-    padding: 9px 14px;
-  }
+  .ghost { font-size: 18px; }
+  .modal { width: calc(100vw - 28px); padding: 18px; border-radius: 18px; }
+  .modalActions button { font-size: 14px; padding: 9px 14px; }
 }
