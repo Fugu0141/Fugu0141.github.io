@@ -94,20 +94,20 @@ p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
 .stage { position: relative; padding: 0 18px 18px; overflow: hidden; }
 
 .stageHeader {
-  height: 82px;
+  height: 44px;
   display: flex;
-  align-items: end;
+  align-items: center;
   gap: 24px;
 }
 
-.monthCard { width: 72px; text-align: center; }
-#monthBig { font-size: 58px; line-height: 48px; letter-spacing: -4px; }
-#monthName { font-size: 19px; margin-top: 8px; }
-.help { margin-bottom: 16px; color: var(--muted); font-size: 13px; }
+.monthCard { display: none; }
+#monthBig { font-size: 0; line-height: 0; }
+#monthName { font-size: 0; }
+.help { color: var(--muted); font-size: 13px; }
 
 .board {
   position: relative;
-  height: calc(100vh - 176px);
+  height: calc(100vh - 138px);
   min-height: 520px;
   border-radius: 18px;
   background: var(--surface);
@@ -167,6 +167,8 @@ p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
   background: rgba(255,255,255,.82);
   box-shadow: 0 4px 14px rgba(255,255,255,.55);
   backdrop-filter: blur(2px);
+  will-change: transform;
+  contain: layout style paint;
 }
 
 .horizontalMode .laneLabel { width: 78px; }
@@ -357,13 +359,10 @@ p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
   .toolbar button { font-size: 14px; padding: 8px 12px; min-height: 38px; box-shadow: 0 4px 10px rgba(0,0,0,.12); }
 
   .stage { padding: 0 6px 8px; min-height: 0; overflow: hidden; }
-  .stageHeader { height: 52px; align-items: center; gap: 10px; }
-  .monthCard { width: 50px; }
+  .stageHeader { height: 30px; align-items: center; gap: 10px; }
   .help { display: none; }
-  #monthBig { font-size: 44px; line-height: 36px; letter-spacing: -3px; }
-  #monthName { font-size: 15px; margin-top: 5px; }
 
-  .board { height: calc(100dvh - 172px); min-height: 420px; border-radius: 16px; }
+  .board { height: calc(100dvh - 150px); min-height: 420px; border-radius: 16px; }
   .verticalMode .laneLine { left: 78px; right: 28px; }
   .verticalMode .laneBand { height: 124px; }
   .verticalMode .laneLabel { width: 58px; padding: 2px 5px; }
