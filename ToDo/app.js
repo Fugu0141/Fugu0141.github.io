@@ -1,4 +1,4 @@
-const STORAGE_KEY = "quest-sticky-todo-v4";
+const STORAGE_KEY = "quest-sticky-todo-v5";
 
 const board = document.getElementById("board");
 const links = document.getElementById("links");
@@ -30,11 +30,13 @@ const dateSaveBtn = document.getElementById("dateSaveBtn");
 
 const noteW = 220;
 const noteH = 104;
-const laneTop = 40;
-const laneGap = 148;
-const laneLabelWidth = 92;
-const columnGap = 286;
-const boardPaddingX = 260;
+const axisLeft = 110;
+const axisTop = 42;
+const dateGap = 280;
+const trackTop = 92;
+const trackGap = 148;
+const boardMinWidth = 1700;
+const boardMinHeight = 820;
 
 let state = makeInitialState();
 let selectedId = null;
@@ -50,6 +52,10 @@ let cachedLaneDates = [];
 let renderQueued = false;
 let saveTimer = null;
 let previewPath = null;
+let boardRect = null;
+let contentWidth = boardMinWidth;
+let contentHeight = boardMinHeight;
+let maxTrack = 0;
 
 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -66,15 +72,16 @@ function normalizeDate(value) {
   return value.slice(0, 10);
 }
 
-function makeTask({ title, parentId = null, x = 520, targetAt = todayISO(), status = "todo" }) {
+function makeTask({ title, parentId = null, targetAt = todayISO(), status = "todo", branchMode = "same" }) {
   return {
     id: id(),
     title: title || "新しいタスク",
     parentId,
-    x,
+    x: 0,
     y: 0,
     targetAt: normalizeDate(targetAt),
-    status
+    status,
+    branchMode: parentId ? branchMode : null
   };
 }
 
@@ -83,46 +90,51 @@ function makeInitialState() {
     id: "root",
     title: "数IIIテスト勉強",
     parentId: null,
-    x: 520,
+    x: 0,
     y: 0,
     targetAt: "2026-05-05",
-    status: "todo"
+    status: "todo",
+    branchMode: null
   };
   const a = {
     id: "a",
     title: "ワーク１２ページ",
     parentId: "root",
-    x: 390,
+    x: 0,
     y: 0,
     targetAt: "2026-05-12",
-    status: "todo"
+    status: "todo",
+    branchMode: "same"
   };
   const b = {
     id: "b",
     title: "基礎演習２ページ",
     parentId: "root",
-    x: 650,
+    x: 0,
     y: 0,
     targetAt: "2026-05-12",
-    status: "todo"
+    status: "todo",
+    branchMode: "branch"
   };
   const c = {
     id: "c",
     title: "ワーク１３ページ",
     parentId: "a",
-    x: 390,
+    x: 0,
     y: 0,
     targetAt: "2026-05-15",
-    status: "todo"
+    status: "todo",
+    branchMode: "same"
   };
   const d = {
     id: "d",
     title: "基礎演習３ページ",
     parentId: "b",
-    x: 650,
+    x: 0,
     y: 0,
     targetAt: "2026-05-18",
-    status: "todo"
+    status: "todo",
+    branchMode: "same"
   };
   return {
     tasks: { root, a, b, c, d },
@@ -141,6 +153,7 @@ function scheduleSave() {
 
 function load() {
   const raw = localStorage.getItem(STORAGE_KEY)
+    || localStorage.getItem("quest-sticky-todo-v4")
     || localStorage.getItem("quest-sticky-todo-v3")
     || localStorage.getItem("quest-sticky-todo-v2");
 
@@ -151,6 +164,10 @@ function load() {
     if (parsed && parsed.tasks) state = parsed;
   } catch {
     state = makeInitialState();
+  }
+
+  for (const task of getTasks()) {
+    if (task.parentId && !task.branchMode) task.branchMode = "same";
   }
 }
 
@@ -164,11 +181,11 @@ function getTasks() {
 }
 
 function getChildren(parentId) {
-  return getTasks().filter(t => t.parentId === parentId);
+  return getTasks().filter(task => task.parentId === parentId);
 }
 
 function getRoots() {
-  return getTasks().filter(t => !t.parentId || !state.tasks[t.parentId]);
+  return getTasks().filter(task => !task.parentId || !state.tasks[task.parentId]);
 }
 
 function getTaskDepth(taskId) {
@@ -202,12 +219,32 @@ function dateIndex(date) {
   return index >= 0 ? index : lanes.length;
 }
 
-function dateToY(date) {
-  return laneTop + dateIndex(date) * laneGap + 28;
+function dateLineX(date) {
+  return axisLeft + dateIndex(date) * dateGap;
 }
 
-function laneLineY(date) {
-  return laneTop + dateIndex(date) * laneGap;
+function dateToX(date) {
+  return dateLineX(date) + 34;
+}
+
+function trackToY(track) {
+  return trackTop + track * trackGap;
+}
+
+function lineXToDate(x) {
+  const lanes = getLaneDates();
+  if (!lanes.length) return todayISO();
+
+  let best = lanes[0];
+  let bestDist = Infinity;
+  for (const date of lanes) {
+    const dist = Math.abs(x - dateLineX(date));
+    if (dist < bestDist) {
+      best = date;
+      bestDist = dist;
+    }
+  }
+  return best;
 }
 
 function formatDateParts(date) {
@@ -223,29 +260,34 @@ function updateMonthCard() {
   monthName.textContent = parts.monthName;
 }
 
-function ensurePositions() {
+function ensureContentSize() {
   refreshLaneDates();
 
-  let maxX = 1200;
+  let farX = boardMinWidth;
+  let farY = boardMinHeight;
   for (const task of getTasks()) {
-    if (!Number.isFinite(task.x)) task.x = 520;
-    if (!Number.isFinite(task.y)) task.y = state.showLanes ? dateToY(task.targetAt) : 80;
-    if (!drag || drag.id !== task.id) task.y = state.showLanes ? dateToY(task.targetAt) : task.y;
-    maxX = Math.max(maxX, task.x + noteW + 180);
+    if (!Number.isFinite(task.x)) task.x = dateToX(task.targetAt);
+    if (!Number.isFinite(task.y)) task.y = trackToY(0);
+    farX = Math.max(farX, task.x + noteW + 220);
+    farY = Math.max(farY, task.y + noteH + 180);
   }
 
-  const lanes = getLaneDates();
-  const height = laneTop + Math.max(5, lanes.length) * laneGap + 240;
-  const width = Math.max(1700, maxX);
+  const laneWidth = axisLeft + Math.max(5, getLaneDates().length) * dateGap + 360;
+  contentWidth = Math.max(boardMinWidth, farX, laneWidth);
+  contentHeight = Math.max(boardMinHeight, farY, trackToY(maxTrack + 2) + 180);
 
   [links, lanesEl, notesEl].forEach(el => {
-    el.style.minHeight = `${height}px`;
-    el.style.minWidth = `${width}px`;
+    el.style.minWidth = `${contentWidth}px`;
+    el.style.minHeight = `${contentHeight}px`;
   });
 }
 
+function startPointerSession() {
+  boardRect = board.getBoundingClientRect();
+}
+
 function boardPoint(e) {
-  const rect = board.getBoundingClientRect();
+  const rect = boardRect || board.getBoundingClientRect();
   return {
     x: e.clientX - rect.left + board.scrollLeft,
     y: e.clientY - rect.top + board.scrollTop
@@ -257,18 +299,18 @@ function setObjectPos(el, x, y) {
   el.style.setProperty("--y", `${y}px`);
 }
 
-function hitTestDateArea(noteTopY) {
+function hitTestDateArea(noteLeftX) {
   if (!state.showLanes) return { kind: "none", date: null };
 
   const lanes = getLaneDates();
-  if (lanes.length === 0) return { kind: "blank", date: todayISO() };
+  if (!lanes.length) return { kind: "blank", date: todayISO() };
 
-  const centerY = noteTopY + noteH / 2;
+  const centerX = noteLeftX + noteW / 2;
   let nearestLine = null;
   let nearestLineDistance = Infinity;
 
   for (const date of lanes) {
-    const dist = Math.abs(centerY - laneLineY(date));
+    const dist = Math.abs(centerX - dateLineX(date));
     if (dist < nearestLineDistance) {
       nearestLineDistance = dist;
       nearestLine = date;
@@ -280,23 +322,23 @@ function hitTestDateArea(noteTopY) {
   }
 
   for (let i = 0; i < lanes.length; i++) {
-    const top = laneTop + i * laneGap;
-    const bottom = top + laneGap;
-    if (centerY > top + 18 && centerY < bottom - 18) {
+    const left = axisLeft + i * dateGap;
+    const right = left + dateGap;
+    if (centerX > left + 18 && centerX < right - 18) {
       return { kind: "lane", date: lanes[i] };
     }
   }
 
-  const lastBottom = laneTop + lanes.length * laneGap;
-  if (centerY >= lastBottom - 18) {
+  const lastRight = axisLeft + lanes.length * dateGap;
+  if (centerX >= lastRight - 18) {
     return { kind: "blank", date: lanes[lanes.length - 1] };
   }
 
   return { kind: "blank", date: lanes[0] };
 }
 
-function updateHotArea(y) {
-  const hit = hitTestDateArea(y);
+function updateHotArea(x) {
+  const hit = hitTestDateArea(x);
   const nextHotLane = hit.kind === "lane" ? hit.date : null;
   const nextHotLine = hit.kind === "line" ? hit.date : null;
   const changed = nextHotLane !== hotLaneDate || nextHotLine !== hotLineDate;
@@ -316,7 +358,7 @@ function requestRender() {
 }
 
 function render() {
-  ensurePositions();
+  ensureContentSize();
   scheduleSave();
   updateMonthCard();
   toggleLanesBtn.textContent = `日付レーン ${state.showLanes ? "ON" : "OFF"}`;
@@ -333,22 +375,23 @@ function renderLanes() {
   const lanes = getLaneDates();
 
   lanes.forEach((date, index) => {
-    const y = laneTop + index * laneGap;
+    const x = axisLeft + index * dateGap;
 
     const band = document.createElement("div");
     band.className = `laneBand ${index === 0 ? "first" : ""} ${hotLaneDate === date ? "highlight" : ""}`;
-    band.style.top = `${y}px`;
+    band.style.left = `${x}px`;
+    band.style.width = `${dateGap}px`;
     fragment.appendChild(band);
 
     const line = document.createElement("div");
     line.className = `laneLine ${hotLineDate === date ? "hot" : ""}`;
-    line.style.top = `${y}px`;
+    line.style.left = `${x}px`;
     fragment.appendChild(line);
 
     const parts = formatDateParts(date);
     const label = document.createElement("div");
     label.className = "laneLabel";
-    label.style.top = `${y + 3}px`;
+    label.style.left = `${x}px`;
     label.innerHTML = `<div class="laneDay">${parts.day}</div><div class="laneMonth">${parts.monthName}</div>`;
     fragment.appendChild(label);
   });
@@ -359,8 +402,8 @@ function renderLanes() {
 function renderLinks() {
   previewPath = null;
   links.innerHTML = "";
-  links.setAttribute("width", String(Math.max(1800, notesEl.scrollWidth || 1800)));
-  links.setAttribute("height", String(Math.max(1000, laneTop + getLaneDates().length * laneGap + 260)));
+  links.setAttribute("width", String(contentWidth));
+  links.setAttribute("height", String(contentHeight));
 
   const fragment = document.createDocumentFragment();
 
@@ -373,25 +416,21 @@ function renderLinks() {
 }
 
 function makeBranchPath(parent, child, color, width, dash) {
-  const sameColumn = Math.abs(parent.x - child.x) < 6;
-  const sameLane = Math.abs(parent.y - child.y) < 20;
+  const sameTrack = Math.abs(parent.y - child.y) < 6;
+  const sameDate = Math.abs(parent.x - child.x) < 6;
   let d;
 
-  if (sameColumn) {
+  if (sameTrack) {
+    d = `M ${parent.x + noteW} ${parent.y + noteH / 2} L ${child.x} ${child.y + noteH / 2}`;
+  } else if (sameDate) {
     d = `M ${parent.x + noteW / 2} ${parent.y + noteH} L ${child.x + noteW / 2} ${child.y}`;
-  } else if (sameLane) {
-    const startX = parent.x + noteW;
-    const startY = parent.y + noteH / 2;
-    const endX = child.x;
-    const endY = child.y + noteH / 2;
-    d = `M ${startX} ${startY} L ${endX} ${endY}`;
   } else {
-    const x1 = parent.x + noteW / 2;
-    const y1 = parent.y + noteH;
-    const x2 = child.x + noteW / 2;
-    const y2 = child.y;
-    const midY = y2 > y1 + 40 ? y1 + Math.max(28, (y2 - y1) * 0.35) : Math.max(y1 + 24, y2 + noteH / 2);
-    d = `M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}`;
+    const x1 = parent.x + noteW;
+    const y1 = parent.y + noteH / 2;
+    const x2 = child.x;
+    const y2 = child.y + noteH / 2;
+    const midX = x1 + Math.max(28, (x2 - x1) * 0.38);
+    d = `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`;
   }
 
   return makePath(d, color, width, dash);
@@ -418,18 +457,26 @@ function ensurePreviewPath() {
   return previewPath;
 }
 
+function inferBranchMode(parent, pointerY) {
+  const parentCenter = parent.y + noteH / 2;
+  return Math.abs(pointerY - parentCenter) < trackGap * 0.42 ? "same" : "branch";
+}
+
 function updatePreviewBranch() {
   if (!connectDrag) return;
 
   const parent = state.tasks[connectDrag.parentId];
   if (!parent) return;
 
-  const x1 = parent.x + noteW / 2;
-  const y1 = parent.y + noteH;
+  const mode = inferBranchMode(parent, connectDrag.y);
+  const x1 = parent.x + noteW;
+  const y1 = parent.y + noteH / 2;
   const x2 = connectDrag.x;
-  const y2 = connectDrag.y;
-  const midY = y2 > y1 + 40 ? y1 + Math.max(28, (y2 - y1) * 0.35) : y1 + 28;
-  const d = `M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}`;
+  const y2 = mode === "same" ? y1 : connectDrag.y;
+  const midX = x1 + Math.max(28, (x2 - x1) * 0.38);
+  const d = mode === "same"
+    ? `M ${x1} ${y1} L ${x2} ${y1}`
+    : `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`;
 
   ensurePreviewPath().setAttribute("d", d);
 }
@@ -453,9 +500,9 @@ function renderNotes() {
     done.className = "doneBtn";
     done.textContent = task.status === "done" ? "✓" : "○";
     done.title = "完了切替";
-    done.addEventListener("pointerdown", e => e.stopPropagation());
-    done.addEventListener("click", e => {
-      e.stopPropagation();
+    done.addEventListener("pointerdown", event => event.stopPropagation());
+    done.addEventListener("click", event => {
+      event.stopPropagation();
       snapshot();
       task.status = task.status === "done" ? "todo" : "done";
       requestRender();
@@ -465,7 +512,7 @@ function renderNotes() {
     const handle = document.createElement("div");
     handle.className = "handle";
     handle.textContent = "+";
-    handle.title = "引っ張って子タスクを作成";
+    handle.title = "右へ引くと同じブランチ / 下へずらすと分岐";
     handle.addEventListener("pointerdown", onHandlePointerDown);
     el.appendChild(handle);
 
@@ -495,34 +542,36 @@ function setSelected(id) {
   }
 }
 
-function onNotePointerDown(e) {
-  if (e.target.classList.contains("handle") || e.target.classList.contains("doneBtn")) return;
+function onNotePointerDown(event) {
+  if (event.target.classList.contains("handle") || event.target.classList.contains("doneBtn")) return;
 
-  const taskId = e.currentTarget.dataset.id;
+  startPointerSession();
+  const taskId = event.currentTarget.dataset.id;
   const task = state.tasks[taskId];
   setSelected(taskId);
 
-  const p = boardPoint(e);
+  const p = boardPoint(event);
   drag = {
     id: taskId,
-    el: e.currentTarget,
+    el: event.currentTarget,
     dx: p.x - task.x,
     dy: p.y - task.y,
     moved: false,
     original: { x: task.x, y: task.y, targetAt: task.targetAt }
   };
 
-  e.currentTarget.setPointerCapture(e.pointerId);
-  e.currentTarget.classList.add("dragging");
+  event.currentTarget.setPointerCapture(event.pointerId);
+  event.currentTarget.classList.add("dragging");
   board.classList.add("grabbing");
 }
 
-function onHandlePointerDown(e) {
-  e.stopPropagation();
+function onHandlePointerDown(event) {
+  event.stopPropagation();
 
-  const noteEl = e.currentTarget.closest(".note");
+  startPointerSession();
+  const noteEl = event.currentTarget.closest(".note");
   const parentId = noteEl.dataset.id;
-  const p = boardPoint(e);
+  const p = boardPoint(event);
 
   setSelected(parentId);
   connectDrag = {
@@ -534,33 +583,34 @@ function onHandlePointerDown(e) {
   ghost.classList.remove("hidden");
   setObjectPos(ghost, p.x - noteW / 2, p.y - noteH / 2);
 
-  noteEl.setPointerCapture(e.pointerId);
+  noteEl.setPointerCapture(event.pointerId);
   updatePreviewBranch();
 }
 
-window.addEventListener("pointermove", e => {
+window.addEventListener("pointermove", event => {
   if (drag) {
     const task = state.tasks[drag.id];
-    const p = boardPoint(e);
+    const p = boardPoint(event);
 
-    task.x = Math.max(laneLabelWidth, p.x - drag.dx);
-    task.y = Math.max(18, p.y - drag.dy);
+    task.x = Math.max(axisLeft - 20, p.x - drag.dx);
+    task.y = Math.max(axisTop + 30, p.y - drag.dy);
     drag.moved = true;
 
     setObjectPos(drag.el, task.x, task.y);
 
-    if (updateHotArea(task.y)) {
+    if (updateHotArea(task.x)) {
       renderLanes();
     }
   }
 
   if (connectDrag) {
-    const p = boardPoint(e);
+    const parent = state.tasks[connectDrag.parentId];
+    const p = boardPoint(event);
 
     connectDrag.x = p.x;
     connectDrag.y = p.y;
 
-    const hit = hitTestDateArea(p.y - noteH / 2);
+    const hit = hitTestDateArea(p.x - noteW / 2);
     const nextHotLane = hit.kind === "lane" ? hit.date : null;
     const nextHotLine = hit.kind === "line" ? hit.date : null;
     const hotChanged = nextHotLane !== hotLaneDate || nextHotLine !== hotLineDate;
@@ -568,15 +618,15 @@ window.addEventListener("pointermove", e => {
     hotLaneDate = nextHotLane;
     hotLineDate = nextHotLine;
 
-    let gy = p.y - noteH / 2;
-    if (hit.kind === "lane") gy = dateToY(hit.date);
+    const mode = inferBranchMode(parent, p.y);
+    let gx = p.x - noteW / 2;
+    if (hit.kind === "lane") gx = dateToX(hit.date);
+    const gy = mode === "same" ? parent.y : Math.max(trackTop, p.y - noteH / 2);
 
-    setObjectPos(ghost, Math.max(laneLabelWidth, p.x - noteW / 2), Math.max(18, gy));
+    setObjectPos(ghost, Math.max(axisLeft - 20, gx), Math.max(axisTop + 30, gy));
     updatePreviewBranch();
 
-    if (hotChanged) {
-      renderLanes();
-    }
+    if (hotChanged) renderLanes();
   }
 });
 
@@ -586,12 +636,12 @@ window.addEventListener("pointerup", () => {
     const currentDrag = drag;
 
     if (drag.moved) {
-      const hit = hitTestDateArea(task.y);
+      const hit = hitTestDateArea(task.x);
       snapshot();
 
       if (state.showLanes && hit.kind === "lane") {
         task.targetAt = hit.date;
-        task.y = dateToY(hit.date);
+        task.x = dateToX(hit.date);
         drag = null;
         finishDragUI(currentDrag);
         requestRender();
@@ -611,9 +661,10 @@ window.addEventListener("pointerup", () => {
   }
 
   if (connectDrag) {
-    const hit = hitTestDateArea(connectDrag.y - noteH / 2);
+    const parent = state.tasks[connectDrag.parentId];
+    const hit = hitTestDateArea(connectDrag.x - noteW / 2);
     const defaultDate = hit.kind === "lane" ? hit.date : todayISO();
-    const x = Math.max(laneLabelWidth, connectDrag.x - noteW / 2);
+    const branchMode = inferBranchMode(parent, connectDrag.y);
     const parentId = connectDrag.parentId;
 
     connectDrag = null;
@@ -626,8 +677,8 @@ window.addEventListener("pointerup", () => {
 
     openCreateTaskModal({
       parentId,
-      x,
-      targetAt: defaultDate
+      targetAt: defaultDate,
+      branchMode
     });
   }
 });
@@ -635,15 +686,18 @@ window.addEventListener("pointerup", () => {
 function finishDragUI(currentDrag) {
   hotLaneDate = null;
   hotLineDate = null;
+  boardRect = null;
   board.classList.remove("grabbing");
   if (currentDrag && currentDrag.el) currentDrag.el.classList.remove("dragging");
   renderLanes();
 }
 
-function openCreateTaskModal({ parentId = null, x = 520, targetAt = todayISO() } = {}) {
+function openCreateTaskModal({ parentId = null, targetAt = todayISO(), branchMode = "same" } = {}) {
   taskModalMode = "create";
-  taskModalContext = { parentId, x, targetAt: normalizeDate(targetAt) };
-  taskModalTitle.textContent = parentId ? "子タスクを作成" : "ルートタスクを作成";
+  taskModalContext = { parentId, targetAt: normalizeDate(targetAt), branchMode };
+  taskModalTitle.textContent = parentId
+    ? branchMode === "same" ? "同じブランチに追加" : "分岐タスクを作成"
+    : "ルートタスクを作成";
   taskNameInput.value = "";
   taskDateInput.value = taskModalContext.targetAt;
   taskModal.classList.remove("hidden");
@@ -676,18 +730,12 @@ function saveTaskModal() {
   snapshot();
 
   if (taskModalMode === "create") {
-    const parent = taskModalContext.parentId ? state.tasks[taskModalContext.parentId] : null;
     const task = makeTask({
       title,
       parentId: taskModalContext.parentId,
-      x: taskModalContext.x ?? (parent ? parent.x : 520),
-      targetAt
+      targetAt,
+      branchMode: taskModalContext.branchMode || "same"
     });
-
-    if (parent) {
-      const siblings = getChildren(parent.id);
-      task.x = siblings.length === 0 ? parent.x : parent.x + siblings.length * columnGap;
-    }
 
     state.tasks[task.id] = task;
     selectedId = task.id;
@@ -704,7 +752,6 @@ function saveTaskModal() {
 
   closeTaskModal();
   refreshLaneDates();
-  snapAllToDates();
   branchLayout();
   requestRender();
 }
@@ -713,10 +760,7 @@ function openChangeDateModal(taskId, defaultDate, original) {
   const task = state.tasks[taskId];
   if (!task) return;
 
-  dateModalContext = {
-    taskId,
-    original
-  };
+  dateModalContext = { taskId, original };
 
   changeDateInput.value = normalizeDate(defaultDate || task.targetAt || todayISO());
   dateModal.classList.remove("hidden");
@@ -747,22 +791,14 @@ function saveDateModal() {
   if (task) {
     task.targetAt = normalizeDate(changeDateInput.value);
     refreshLaneDates();
-    task.y = dateToY(task.targetAt);
+    task.x = dateToX(task.targetAt);
   }
 
   dateModal.classList.add("hidden");
   dateModalContext = null;
   hotLaneDate = null;
   hotLineDate = null;
-  branchLayout();
   requestRender();
-}
-
-function snapAllToDates() {
-  refreshLaneDates();
-  for (const task of getTasks()) {
-    task.y = state.showLanes ? dateToY(task.targetAt) : task.y;
-  }
 }
 
 function sortByDateThenTitle(a, b) {
@@ -775,37 +811,37 @@ function branchLayout() {
   refreshLaneDates();
 
   const roots = getRoots().sort(sortByDateThenTitle);
-  let nextCol = 0;
+  let nextTrack = 0;
 
   for (const root of roots) {
-    nextCol = assignBranchColumns(root.id, nextCol);
-    nextCol += 2;
+    nextTrack = assignBranchTracks(root.id, nextTrack, nextTrack + 1);
+    nextTrack += 1;
   }
 
-  resolveColumnCollisions();
-  applyColumnsToPositions();
-  deleteTempColumns();
+  maxTrack = Math.max(0, nextTrack);
+  resolveTrackCollisions();
+  applyTracksToPositions();
+  deleteTempTracks();
 }
 
-function assignBranchColumns(taskId, col) {
+function assignBranchTracks(taskId, track, nextTrack) {
   const task = state.tasks[taskId];
-  if (!task) return col + 1;
+  if (!task) return nextTrack;
 
-  task._col = col;
+  task._track = track;
   const children = getChildren(taskId).sort(sortByDateThenTitle);
+  if (!children.length) return Math.max(nextTrack, track + 1);
 
-  if (children.length === 0) return col + 1;
+  children.forEach((child, index) => {
+    const sameBranch = child.branchMode === "same" || (!child.branchMode && index === 0);
+    const childTrack = sameBranch ? track : nextTrack++;
+    nextTrack = assignBranchTracks(child.id, childTrack, nextTrack);
+  });
 
-  let nextCol = assignBranchColumns(children[0].id, col);
-
-  for (let i = 1; i < children.length; i++) {
-    nextCol = assignBranchColumns(children[i].id, Math.max(nextCol, col + i));
-  }
-
-  return Math.max(nextCol, col + children.length);
+  return Math.max(nextTrack, track + 1);
 }
 
-function resolveColumnCollisions() {
+function resolveTrackCollisions() {
   const tasks = getTasks()
     .slice()
     .sort((a, b) => {
@@ -819,56 +855,44 @@ function resolveColumnCollisions() {
     const occupied = new Set();
 
     for (const task of tasks) {
-      if (!Number.isFinite(task._col)) {
-        task._col = Math.max(0, Math.round((task.x - boardPaddingX) / columnGap));
-      }
+      if (!Number.isFinite(task._track)) task._track = 0;
 
-      let col = task._col;
+      let track = task._track;
       const date = normalizeDate(task.targetAt);
+      while (occupied.has(`${date}:${track}`)) track += 1;
 
-      while (occupied.has(`${date}:${col}`)) {
-        col += 1;
-      }
-
-      if (col !== task._col) {
-        shiftSubtreeColumns(task.id, col - task._col);
+      if (track !== task._track) {
+        shiftSubtreeTracks(task.id, track - task._track);
         changed = true;
       }
 
-      occupied.add(`${date}:${task._col}`);
+      occupied.add(`${date}:${task._track}`);
+      maxTrack = Math.max(maxTrack, task._track);
     }
 
     if (!changed) break;
   }
 }
 
-function shiftSubtreeColumns(taskId, delta) {
+function shiftSubtreeTracks(taskId, delta) {
   const task = state.tasks[taskId];
   if (!task) return;
 
-  task._col = (task._col ?? 0) + delta;
-  for (const child of getChildren(taskId)) {
-    shiftSubtreeColumns(child.id, delta);
-  }
+  task._track = (task._track ?? 0) + delta;
+  for (const child of getChildren(taskId)) shiftSubtreeTracks(child.id, delta);
 }
 
-function applyColumnsToPositions() {
-  let maxCol = 0;
+function applyTracksToPositions() {
   for (const task of getTasks()) {
-    const col = Number.isFinite(task._col) ? task._col : 0;
-    maxCol = Math.max(maxCol, col);
-    task.x = boardPaddingX + col * columnGap;
-    if (state.showLanes) task.y = dateToY(task.targetAt);
+    const track = Number.isFinite(task._track) ? task._track : 0;
+    maxTrack = Math.max(maxTrack, track);
+    task.x = dateToX(task.targetAt);
+    task.y = trackToY(track);
   }
-
-  const width = Math.max(1700, boardPaddingX + (maxCol + 2) * columnGap + noteW);
-  [links, lanesEl, notesEl].forEach(el => {
-    el.style.minWidth = `${width}px`;
-  });
 }
 
-function deleteTempColumns() {
-  for (const task of getTasks()) delete task._col;
+function deleteTempTracks() {
+  for (const task of getTasks()) delete task._track;
 }
 
 function verticalLayoutBranches() {
@@ -880,7 +904,7 @@ function autoLayoutTree() {
 }
 
 addRootBtn.addEventListener("click", () => {
-  openCreateTaskModal({ parentId: null, x: 520, targetAt: todayISO() });
+  openCreateTaskModal({ parentId: null, targetAt: todayISO(), branchMode: "same" });
 });
 
 treeLayoutBtn.addEventListener("click", () => {
@@ -898,7 +922,6 @@ verticalLayoutBtn.addEventListener("click", () => {
 toggleLanesBtn.addEventListener("click", () => {
   snapshot();
   state.showLanes = !state.showLanes;
-  if (state.showLanes) snapAllToDates();
   requestRender();
 });
 
@@ -908,6 +931,7 @@ undoBtn.addEventListener("click", () => {
 
   state = JSON.parse(prev);
   selectedId = null;
+  branchLayout();
   requestRender();
 });
 
@@ -926,28 +950,28 @@ taskSaveBtn.addEventListener("click", saveTaskModal);
 dateCancelBtn.addEventListener("click", () => closeDateModal({ restore: true }));
 dateSaveBtn.addEventListener("click", saveDateModal);
 
-taskNameInput.addEventListener("keydown", e => {
-  if (e.key === "Enter") saveTaskModal();
+taskNameInput.addEventListener("keydown", event => {
+  if (event.key === "Enter") saveTaskModal();
 });
 
-taskDateInput.addEventListener("keydown", e => {
-  if (e.key === "Enter") saveTaskModal();
+taskDateInput.addEventListener("keydown", event => {
+  if (event.key === "Enter") saveTaskModal();
 });
 
-changeDateInput.addEventListener("keydown", e => {
-  if (e.key === "Enter") saveDateModal();
+changeDateInput.addEventListener("keydown", event => {
+  if (event.key === "Enter") saveDateModal();
 });
 
-taskModal.addEventListener("pointerdown", e => {
-  if (e.target === taskModal) closeTaskModal();
+taskModal.addEventListener("pointerdown", event => {
+  if (event.target === taskModal) closeTaskModal();
 });
 
-dateModal.addEventListener("pointerdown", e => {
-  if (e.target === dateModal) closeDateModal({ restore: true });
+dateModal.addEventListener("pointerdown", event => {
+  if (event.target === dateModal) closeDateModal({ restore: true });
 });
 
-board.addEventListener("pointerdown", e => {
-  if (e.target === board || e.target === notesEl || e.target === lanesEl) {
+board.addEventListener("pointerdown", event => {
+  if (event.target === board || event.target === notesEl || event.target === lanesEl) {
     setSelected(null);
   }
 });
@@ -956,6 +980,5 @@ window.addEventListener("beforeunload", saveNow);
 
 load();
 refreshLaneDates();
-snapAllToDates();
 branchLayout();
 render();
