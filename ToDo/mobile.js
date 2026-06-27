@@ -1,20 +1,18 @@
 (() => {
   const isTouchLike = event => event.pointerType === "touch" || window.matchMedia("(pointer: coarse)").matches;
 
-  function closestDateFromPointer(event) {
-    try {
-      if (typeof boardPoint === "function" && typeof hitTestDateArea === "function") {
-        const point = boardPoint(event);
-        const hit = hitTestDateArea(point.x - 110);
-        if (hit && hit.date) return hit.date;
-      }
-    } catch (_) {}
-
+  function fallbackToday() {
     try {
       if (typeof todayISO === "function") return todayISO();
     } catch (_) {}
-
     return new Date().toISOString().slice(0, 10);
+  }
+
+  function dateFromPointer(event) {
+    try {
+      if (typeof getDateForPointer === "function") return getDateForPointer(event);
+    } catch (_) {}
+    return fallbackToday();
   }
 
   document.addEventListener("pointerdown", event => {
@@ -31,7 +29,7 @@
     if (typeof openCreateTaskModal === "function") {
       openCreateTaskModal({
         parentId: note.dataset.id,
-        targetAt: closestDateFromPointer(event),
+        targetAt: dateFromPointer(event),
         branchMode: "same"
       });
     }
