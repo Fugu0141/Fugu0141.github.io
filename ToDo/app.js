@@ -1,4 +1,4 @@
-const STORAGE_KEY = "quest-sticky-todo-v2";
+const STORAGE_KEY = "quest-sticky-todo-v3";
 
 const board = document.getElementById("board");
 const links = document.getElementById("links");
@@ -33,6 +33,8 @@ const noteH = 104;
 const laneTop = 40;
 const laneGap = 148;
 const laneLabelWidth = 92;
+const columnGap = 286;
+const boardPaddingX = 260;
 
 let state = makeInitialState();
 let selectedId = null;
@@ -44,6 +46,10 @@ let hotLineDate = null;
 let taskModalMode = null;
 let taskModalContext = null;
 let dateModalContext = null;
+let cachedLaneDates = [];
+let renderQueued = false;
+let overlayQueued = false;
+let saveTimer = null;
 
 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -125,12 +131,19 @@ function makeInitialState() {
   };
 }
 
-function save() {
+function saveNow() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNow, 120);
+}
+
 function load() {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const rawV3 = localStorage.getItem(STORAGE_KEY);
+  const rawV2 = localStorage.getItem("quest-sticky-todo-v2");
+  const raw = rawV3 || rawV2;
   if (!raw) return;
   try {
     const parsed = JSON.parse(raw);
@@ -153,10 +166,33 @@ function getChildren(parentId) {
   return getTasks().filter(t => t.parentId === parentId);
 }
 
-function getLaneDates() {
+function getRoots() {
+  return getTasks().filter(t => !t.parentId || !state.tasks[t.parentId]);
+}
+
+function getTaskDepth(taskId) {
+  let depth = 0;
+  let task = state.tasks[taskId];
+  const seen = new Set();
+
+  while (task && task.parentId && state.tasks[task.parentId] && !seen.has(task.parentId)) {
+    seen.add(task.id);
+    depth += 1;
+    task = state.tasks[task.parentId];
+  }
+
+  return depth;
+}
+
+function refreshLaneDates() {
   const dates = new Set();
   for (const t of getTasks()) dates.add(normalizeDate(t.targetAt));
-  return [...dates].sort((a, b) => a.localeCompare(b));
+  cachedLaneDates = [...dates].sort((a, b) => a.localeCompare(b));
+}
+
+function getLaneDates() {
+  if (!cachedLaneDates.length && getTasks().length) refreshLaneDates();
+  return cachedLaneDates;
 }
 
 function dateIndex(date) {
@@ -187,16 +223,21 @@ function updateMonthCard() {
 }
 
 function ensurePositions() {
+  refreshLaneDates();
+
+  let maxX = 1200;
   for (const t of getTasks()) {
     if (!Number.isFinite(t.x)) t.x = 520;
+    if (!Number.isFinite(t.y)) t.y = state.showLanes ? dateToY(t.targetAt) : 80;
     if (!drag || drag.id !== t.id) {
-      t.y = state.showLanes ? dateToY(t.targetAt) : t.y || 80;
+      t.y = state.showLanes ? dateToY(t.targetAt) : t.y;
     }
+    maxX = Math.max(maxX, t.x + noteW + 180);
   }
 
   const lanes = getLaneDates();
   const height = laneTop + Math.max(5, lanes.length) * laneGap + 240;
-  const width = 1700;
+  const width = Math.max(1700, maxX);
   [links, lanesEl, notesEl].forEach(el => {
     el.style.minHeight = `${height}px`;
     el.style.minWidth = `${width}px`;
@@ -252,13 +293,36 @@ function hitTestDateArea(noteTopY) {
 
 function updateHotArea(y) {
   const hit = hitTestDateArea(y);
-  hotLaneDate = hit.kind === "lane" ? hit.date : null;
-  hotLineDate = hit.kind === "line" ? hit.date : null;
+  const nextHotLane = hit.kind === "lane" ? hit.date : null;
+  const nextHotLine = hit.kind === "line" ? hit.date : null;
+  const changed = nextHotLane !== hotLaneDate || nextHotLine !== hotLineDate;
+  hotLaneDate = nextHotLane;
+  hotLineDate = nextHotLine;
+  return changed;
+}
+
+function requestRender() {
+  if (renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => {
+    renderQueued = false;
+    render();
+  });
+}
+
+function requestOverlayRender() {
+  if (overlayQueued) return;
+  overlayQueued = true;
+  requestAnimationFrame(() => {
+    overlayQueued = false;
+    renderLanes();
+    renderLinks();
+  });
 }
 
 function render() {
   ensurePositions();
-  save();
+  scheduleSave();
   updateMonthCard();
   toggleLanesBtn.textContent = `日付レーン ${state.showLanes ? "ON" : "OFF"}`;
   renderLanes();
@@ -295,8 +359,8 @@ function renderLanes() {
 
 function renderLinks() {
   links.innerHTML = "";
-  links.setAttribute("width", "1800");
-  links.setAttribute("height", Math.max(1000, laneTop + getLaneDates().length * laneGap + 260));
+  links.setAttribute("width", String(Math.max(1800, notesEl.scrollWidth || 1800)));
+  links.setAttribute("height", String(Math.max(1000, laneTop + getLaneDates().length * laneGap + 260)));
 
   for (const task of getTasks()) {
     if (!task.parentId || !state.tasks[task.parentId]) continue;
@@ -320,6 +384,16 @@ function renderLinks() {
 }
 
 function drawBranch(parent, child, color, width, dash) {
+  const sameLane = Math.abs(parent.y - child.y) < 20;
+  if (sameLane && Math.abs(parent.x - child.x) > 10) {
+    const startX = parent.x + noteW;
+    const startY = parent.y + noteH / 2;
+    const endX = child.x;
+    const endY = child.y + noteH / 2;
+    drawPath(`M ${startX} ${startY} L ${endX} ${endY}`, color, width, dash);
+    return;
+  }
+
   const x1 = parent.x + noteW / 2;
   const y1 = parent.y + noteH;
   const x2 = child.x + noteW / 2;
@@ -328,8 +402,17 @@ function drawBranch(parent, child, color, width, dash) {
 }
 
 function drawBranchFromPoint(x1, y1, x2, y2, color, width, dash) {
-  const midY = Math.min(y2 - 18, y1 + Math.max(26, (y2 - y1) * 0.35));
+  if (Math.abs(x1 - x2) < 6) {
+    drawPath(`M ${x1} ${y1} L ${x2} ${y2}`, color, width, dash);
+    return;
+  }
+
+  const midY = y2 > y1 + 40 ? y1 + Math.max(28, (y2 - y1) * 0.35) : Math.max(y1 + 24, y2 + noteH / 2);
   const d = `M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}`;
+  drawPath(d, color, width, dash);
+}
+
+function drawPath(d, color, width, dash) {
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("d", d);
   path.setAttribute("fill", "none");
@@ -365,7 +448,7 @@ function renderNotes() {
       e.stopPropagation();
       snapshot();
       task.status = task.status === "done" ? "todo" : "done";
-      render();
+      requestRender();
     });
     el.appendChild(done);
 
@@ -383,16 +466,33 @@ function renderNotes() {
   }
 }
 
+function setSelected(id) {
+  if (selectedId === id) return;
+  const prev = selectedId;
+  selectedId = id;
+
+  if (prev) {
+    const prevEl = notesEl.querySelector(`[data-id="${prev}"]`);
+    if (prevEl) prevEl.classList.remove("selected");
+  }
+
+  if (selectedId) {
+    const el = notesEl.querySelector(`[data-id="${selectedId}"]`);
+    if (el) el.classList.add("selected");
+  }
+}
+
 function onNotePointerDown(e) {
   if (e.target.classList.contains("handle") || e.target.classList.contains("doneBtn")) return;
 
-  const id = e.currentTarget.dataset.id;
-  const t = state.tasks[id];
-  selectedId = id;
+  const taskId = e.currentTarget.dataset.id;
+  const t = state.tasks[taskId];
+  setSelected(taskId);
 
   const p = boardPoint(e);
   drag = {
-    id,
+    id: taskId,
+    el: e.currentTarget,
     dx: p.x - t.x,
     dy: p.y - t.y,
     moved: false,
@@ -402,7 +502,6 @@ function onNotePointerDown(e) {
   e.currentTarget.setPointerCapture(e.pointerId);
   e.currentTarget.classList.add("dragging");
   board.classList.add("grabbing");
-  renderNotes();
 }
 
 function onHandlePointerDown(e) {
@@ -412,7 +511,7 @@ function onHandlePointerDown(e) {
   const parentId = noteEl.dataset.id;
   const p = boardPoint(e);
 
-  selectedId = parentId;
+  setSelected(parentId);
   connectDrag = {
     parentId,
     x: p.x,
@@ -424,7 +523,7 @@ function onHandlePointerDown(e) {
   ghost.style.top = `${p.y - noteH / 2}px`;
 
   noteEl.setPointerCapture(e.pointerId);
-  renderLinks();
+  requestOverlayRender();
 }
 
 window.addEventListener("pointermove", e => {
@@ -435,15 +534,12 @@ window.addEventListener("pointermove", e => {
     t.y = Math.max(18, p.y - drag.dy);
     drag.moved = true;
 
-    updateHotArea(t.y);
-    renderLanes();
-    renderLinks();
+    const hotChanged = updateHotArea(t.y);
+    drag.el.style.left = `${t.x}px`;
+    drag.el.style.top = `${t.y}px`;
 
-    const el = notesEl.querySelector(`[data-id="${drag.id}"]`);
-    if (el) {
-      el.style.left = `${t.x}px`;
-      el.style.top = `${t.y}px`;
-    }
+    if (hotChanged) renderLanes();
+    requestOverlayRender();
   }
 
   if (connectDrag) {
@@ -452,8 +548,11 @@ window.addEventListener("pointermove", e => {
     connectDrag.y = p.y;
 
     const hit = hitTestDateArea(p.y - noteH / 2);
-    hotLaneDate = hit.kind === "lane" ? hit.date : null;
-    hotLineDate = hit.kind === "line" ? hit.date : null;
+    const nextHotLane = hit.kind === "lane" ? hit.date : null;
+    const nextHotLine = hit.kind === "line" ? hit.date : null;
+    const hotChanged = nextHotLane !== hotLaneDate || nextHotLine !== hotLineDate;
+    hotLaneDate = nextHotLane;
+    hotLineDate = nextHotLine;
 
     let gy = p.y - noteH / 2;
     if (hit.kind === "lane") gy = dateToY(hit.date);
@@ -461,14 +560,15 @@ window.addEventListener("pointermove", e => {
     ghost.style.left = `${Math.max(laneLabelWidth, p.x - noteW / 2)}px`;
     ghost.style.top = `${Math.max(18, gy)}px`;
 
-    renderLanes();
-    renderLinks();
+    if (hotChanged) renderLanes();
+    requestOverlayRender();
   }
 });
 
 window.addEventListener("pointerup", () => {
   if (drag) {
     const t = state.tasks[drag.id];
+    const currentDrag = drag;
 
     if (drag.moved) {
       const hit = hitTestDateArea(t.y);
@@ -477,19 +577,22 @@ window.addEventListener("pointerup", () => {
       if (state.showLanes && hit.kind === "lane") {
         t.targetAt = hit.date;
         t.y = dateToY(hit.date);
-        render();
+        drag = null;
+        finishDragUI(currentDrag);
+        requestRender();
       } else if (state.showLanes && (hit.kind === "line" || hit.kind === "blank")) {
-        openChangeDateModal(t.id, hit.date, drag.original);
+        drag = null;
+        finishDragUI(currentDrag);
+        openChangeDateModal(t.id, hit.date, currentDrag.original);
       } else {
-        render();
+        drag = null;
+        finishDragUI(currentDrag);
+        requestRender();
       }
+    } else {
+      drag = null;
+      finishDragUI(currentDrag);
     }
-
-    drag = null;
-    hotLaneDate = null;
-    hotLineDate = null;
-    board.classList.remove("grabbing");
-    notesEl.querySelectorAll(".dragging").forEach(el => el.classList.remove("dragging"));
   }
 
   if (connectDrag) {
@@ -513,6 +616,13 @@ window.addEventListener("pointerup", () => {
   }
 });
 
+function finishDragUI(currentDrag) {
+  hotLaneDate = null;
+  hotLineDate = null;
+  board.classList.remove("grabbing");
+  if (currentDrag && currentDrag.el) currentDrag.el.classList.remove("dragging");
+}
+
 function openCreateTaskModal({ parentId = null, x = 520, targetAt = todayISO() } = {}) {
   taskModalMode = "create";
   taskModalContext = { parentId, x, targetAt: normalizeDate(targetAt) };
@@ -520,7 +630,7 @@ function openCreateTaskModal({ parentId = null, x = 520, targetAt = todayISO() }
   taskNameInput.value = "";
   taskDateInput.value = taskModalContext.targetAt;
   taskModal.classList.remove("hidden");
-  setTimeout(() => taskNameInput.focus(), 30);
+  requestAnimationFrame(() => taskNameInput.focus());
 }
 
 function openEditTaskModal(taskId) {
@@ -533,7 +643,7 @@ function openEditTaskModal(taskId) {
   taskNameInput.value = t.title;
   taskDateInput.value = normalizeDate(t.targetAt);
   taskModal.classList.remove("hidden");
-  setTimeout(() => taskNameInput.select(), 30);
+  requestAnimationFrame(() => taskNameInput.select());
 }
 
 function closeTaskModal() {
@@ -557,9 +667,13 @@ function saveTaskModal() {
       targetAt
     });
 
-    if (parent && Math.abs(task.x - parent.x) < 12) {
+    if (parent) {
       const siblings = getChildren(parent.id);
-      task.x = parent.x + (siblings.length - (siblings.length ? 0.5 : 0)) * 260;
+      if (siblings.length === 0) {
+        task.x = parent.x;
+      } else if (Math.abs(task.x - parent.x) < 12) {
+        task.x = parent.x + siblings.length * columnGap;
+      }
     }
 
     state.tasks[task.id] = task;
@@ -576,8 +690,10 @@ function saveTaskModal() {
   }
 
   closeTaskModal();
+  refreshLaneDates();
   snapAllToDates();
-  render();
+  branchLayout();
+  requestRender();
 }
 
 function openChangeDateModal(taskId, defaultDate, original) {
@@ -591,7 +707,7 @@ function openChangeDateModal(taskId, defaultDate, original) {
 
   changeDateInput.value = normalizeDate(defaultDate || task.targetAt || todayISO());
   dateModal.classList.remove("hidden");
-  setTimeout(() => changeDateInput.focus(), 30);
+  requestAnimationFrame(() => changeDateInput.focus());
 }
 
 function closeDateModal({ restore = false } = {}) {
@@ -607,7 +723,7 @@ function closeDateModal({ restore = false } = {}) {
   dateModalContext = null;
   hotLaneDate = null;
   hotLineDate = null;
-  render();
+  requestRender();
 }
 
 function saveDateModal() {
@@ -616,6 +732,7 @@ function saveDateModal() {
   const task = state.tasks[dateModalContext.taskId];
   if (task) {
     task.targetAt = normalizeDate(changeDateInput.value);
+    refreshLaneDates();
     task.y = dateToY(task.targetAt);
   }
 
@@ -623,123 +740,121 @@ function saveDateModal() {
   dateModalContext = null;
   hotLaneDate = null;
   hotLineDate = null;
-  render();
+  branchLayout();
+  requestRender();
 }
 
 function snapAllToDates() {
+  refreshLaneDates();
   for (const task of getTasks()) {
     task.y = state.showLanes ? dateToY(task.targetAt) : task.y;
   }
 }
 
-function measureSubtree(taskId) {
-  const children = getChildren(taskId);
-  if (!children.length) return noteW;
-  const total = children.map(c => measureSubtree(c.id)).reduce((a, b) => a + b, 0) + (children.length - 1) * 64;
-  return Math.max(noteW, total);
+function sortByDateThenTitle(a, b) {
+  const dateDiff = normalizeDate(a.targetAt).localeCompare(normalizeDate(b.targetAt));
+  if (dateDiff !== 0) return dateDiff;
+  return String(a.title).localeCompare(String(b.title), "ja");
 }
 
-function autoLayoutTree() {
-  const roots = getTasks().filter(t => !t.parentId);
-  roots.sort((a, b) => normalizeDate(a.targetAt).localeCompare(normalizeDate(b.targetAt)));
+function branchLayout() {
+  refreshLaneDates();
 
-  let cursor = 260;
+  const roots = getRoots().sort(sortByDateThenTitle);
+  let nextCol = 0;
+
   for (const root of roots) {
-    const width = layoutTreeNode(root.id, cursor);
-    cursor += width + 150;
+    nextCol = assignBranchColumns(root.id, nextCol);
+    nextCol += 2;
   }
 
-  resolveCollisions();
+  resolveColumnCollisions();
+  applyColumnsToPositions();
+  deleteTempColumns();
 }
 
-function layoutTreeNode(taskId, left) {
+function assignBranchColumns(taskId, col) {
   const task = state.tasks[taskId];
-  const children = getChildren(taskId);
-  children.sort((a, b) => normalizeDate(a.targetAt).localeCompare(normalizeDate(b.targetAt)));
+  if (!task) return col + 1;
 
-  const width = measureSubtree(taskId);
+  task._col = col;
+  const children = getChildren(taskId).sort(sortByDateThenTitle);
 
-  if (!children.length) {
-    task.x = left + (width - noteW) / 2;
-  } else {
-    let childLeft = left;
-    for (const child of children) {
-      const childWidth = measureSubtree(child.id);
-      layoutTreeNode(child.id, childLeft);
-      childLeft += childWidth + 64;
+  if (children.length === 0) return col + 1;
+  if (children.length === 1) return assignBranchColumns(children[0].id, col);
+
+  let nextCol = assignBranchColumns(children[0].id, col);
+  for (let i = 1; i < children.length; i++) {
+    nextCol = assignBranchColumns(children[i].id, nextCol);
+  }
+
+  return nextCol;
+}
+
+function resolveColumnCollisions() {
+  const tasks = getTasks()
+    .slice()
+    .sort((a, b) => {
+      const dateDiff = normalizeDate(a.targetAt).localeCompare(normalizeDate(b.targetAt));
+      if (dateDiff !== 0) return dateDiff;
+      return getTaskDepth(a.id) - getTaskDepth(b.id);
+    });
+
+  const occupied = new Set();
+
+  for (const task of tasks) {
+    if (!Number.isFinite(task._col)) task._col = Math.max(0, Math.round((task.x - boardPaddingX) / columnGap));
+
+    let col = task._col;
+    const date = normalizeDate(task.targetAt);
+    while (occupied.has(`${date}:${col}`)) col += 1;
+
+    if (col !== task._col) {
+      shiftSubtreeColumns(task.id, col - task._col);
     }
-    const first = children[0];
-    const last = children[children.length - 1];
-    task.x = (first.x + last.x) / 2;
-  }
 
-  task.y = state.showLanes ? dateToY(task.targetAt) : task.y;
-  return width;
+    markSubtreeOccupancy(task.id, occupied);
+  }
 }
 
-function verticalLayoutBranches() {
-  const roots = getTasks().filter(t => !t.parentId);
-  roots.sort((a, b) => normalizeDate(a.targetAt).localeCompare(normalizeDate(b.targetAt)));
+function shiftSubtreeColumns(taskId, delta) {
+  const task = state.tasks[taskId];
+  if (!task) return;
+  task._col = (task._col ?? 0) + delta;
+  for (const child of getChildren(taskId)) shiftSubtreeColumns(child.id, delta);
+}
 
-  let rootX = 500;
-  for (const root of roots) {
-    root.x = rootX;
-    layoutVerticalChildren(root.id, root.x);
-    rootX += Math.max(360, countLeafs(root.id) * 280 + 160);
-  }
+function markSubtreeOccupancy(taskId, occupied) {
+  const task = state.tasks[taskId];
+  if (!task) return;
+  occupied.add(`${normalizeDate(task.targetAt)}:${task._col ?? 0}`);
+}
 
+function applyColumnsToPositions() {
+  let maxCol = 0;
   for (const task of getTasks()) {
-    task.y = state.showLanes ? dateToY(task.targetAt) : task.y;
+    const col = Number.isFinite(task._col) ? task._col : 0;
+    maxCol = Math.max(maxCol, col);
+    task.x = boardPaddingX + col * columnGap;
+    if (state.showLanes) task.y = dateToY(task.targetAt);
   }
 
-  resolveCollisions();
-}
-
-function layoutVerticalChildren(parentId, centerX) {
-  const children = getChildren(parentId);
-  if (!children.length) return;
-
-  children.sort((a, b) => normalizeDate(a.targetAt).localeCompare(normalizeDate(b.targetAt)));
-
-  if (children.length === 1) {
-    children[0].x = centerX;
-    layoutVerticalChildren(children[0].id, centerX);
-    return;
-  }
-
-  const gap = 270;
-  const start = centerX - ((children.length - 1) * gap) / 2;
-
-  children.forEach((child, i) => {
-    child.x = start + i * gap;
-    layoutVerticalChildren(child.id, child.x);
+  const width = Math.max(1700, boardPaddingX + (maxCol + 2) * columnGap + noteW);
+  [links, lanesEl, notesEl].forEach(el => {
+    el.style.minWidth = `${width}px`;
   });
 }
 
-function countLeafs(taskId) {
-  const children = getChildren(taskId);
-  if (!children.length) return 1;
-  return children.map(c => countLeafs(c.id)).reduce((a, b) => a + b, 0);
+function deleteTempColumns() {
+  for (const task of getTasks()) delete task._col;
 }
 
-function resolveCollisions() {
-  const byLane = new Map();
+function verticalLayoutBranches() {
+  branchLayout();
+}
 
-  for (const task of getTasks()) {
-    const key = normalizeDate(task.targetAt);
-    if (!byLane.has(key)) byLane.set(key, []);
-    byLane.get(key).push(task);
-  }
-
-  for (const tasks of byLane.values()) {
-    tasks.sort((a, b) => a.x - b.x);
-    for (let i = 1; i < tasks.length; i++) {
-      const prev = tasks[i - 1];
-      const cur = tasks[i];
-      const minX = prev.x + noteW + 36;
-      if (cur.x < minX) cur.x = minX;
-    }
-  }
+function autoLayoutTree() {
+  branchLayout();
 }
 
 addRootBtn.addEventListener("click", () => {
@@ -749,20 +864,20 @@ addRootBtn.addEventListener("click", () => {
 treeLayoutBtn.addEventListener("click", () => {
   snapshot();
   autoLayoutTree();
-  render();
+  requestRender();
 });
 
 verticalLayoutBtn.addEventListener("click", () => {
   snapshot();
   verticalLayoutBranches();
-  render();
+  requestRender();
 });
 
 toggleLanesBtn.addEventListener("click", () => {
   snapshot();
   state.showLanes = !state.showLanes;
   if (state.showLanes) snapAllToDates();
-  render();
+  requestRender();
 });
 
 undoBtn.addEventListener("click", () => {
@@ -770,7 +885,7 @@ undoBtn.addEventListener("click", () => {
   if (!prev) return;
   state = JSON.parse(prev);
   selectedId = null;
-  render();
+  requestRender();
 });
 
 resetBtn.addEventListener("click", () => {
@@ -778,7 +893,8 @@ resetBtn.addEventListener("click", () => {
   snapshot();
   state = makeInitialState();
   selectedId = null;
-  render();
+  branchLayout();
+  requestRender();
 });
 
 taskCancelBtn.addEventListener("click", closeTaskModal);
@@ -805,11 +921,14 @@ dateModal.addEventListener("pointerdown", e => {
 
 board.addEventListener("pointerdown", e => {
   if (e.target === board || e.target === notesEl || e.target === lanesEl) {
-    selectedId = null;
-    renderNotes();
+    setSelected(null);
   }
 });
 
+window.addEventListener("beforeunload", saveNow);
+
 load();
+refreshLaneDates();
 snapAllToDates();
+branchLayout();
 render();
