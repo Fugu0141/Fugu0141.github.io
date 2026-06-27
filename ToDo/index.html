@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Quest Sticky ToDo v9</title>
-  <link rel="stylesheet" href="./style.css?v=20260628-09" />
+  <title>Quest Sticky ToDo v10</title>
+  <link rel="stylesheet" href="./style.css?v=20260628-10" />
 </head>
 <body>
   <div class="app">
@@ -35,13 +35,14 @@
           <div id="monthName">May</div>
         </div>
         <div class="help">
-          PC: Delete/Backspaceで選択タスク削除 / スマホ: タスク左上の×で削除 / 端の区切り線までが日付セル
+          PC: 日付は上に固定 / スマホ: 日付は左に固定 / Deleteで削除 / 端の区切り線までが日付セル
         </div>
       </div>
 
       <div id="board" class="board">
         <svg id="links" class="links"></svg>
         <div id="lanes" class="lanes"></div>
+        <div id="dateHud" class="dateHud"></div>
         <div id="notes" class="notes"></div>
         <div id="ghost" class="ghost hidden">新しいタスク</div>
       </div>
@@ -81,7 +82,7 @@
     </div>
   </div>
 
-  <script src="./app.js?v=20260628-09"></script>
-  <script src="./mobile.js?v=20260628-09"></script>
+  <script src="./app.js?v=20260628-10"></script>
+  <script src="./mobile.js?v=20260628-10"></script>
 </body>
 </html>
