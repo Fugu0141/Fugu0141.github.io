@@ -1,8 +1,9 @@
-const STORAGE_KEY = "quest-sticky-todo-v9";
+const STORAGE_KEY = "quest-sticky-todo-v10";
 
 const board = document.getElementById("board");
 const links = document.getElementById("links");
 const lanesEl = document.getElementById("lanes");
+const dateHud = document.getElementById("dateHud");
 const notesEl = document.getElementById("notes");
 const ghost = document.getElementById("ghost");
 
@@ -29,8 +30,13 @@ const changeDateInput = document.getElementById("changeDateInput");
 const dateCancelBtn = document.getElementById("dateCancelBtn");
 const dateSaveBtn = document.getElementById("dateSaveBtn");
 
-const noteW = 220;
-const noteH = 104;
+const desktopNoteW = 220;
+const desktopNoteH = 104;
+const mobileNoteW = 176;
+const mobileNoteH = 82;
+let noteW = desktopNoteW;
+let noteH = desktopNoteH;
+
 const mobileQuery = window.matchMedia("(max-width: 980px)");
 
 const hAxisLeft = 110;
@@ -38,11 +44,11 @@ const hDateGap = 280;
 const hTrackTop = 92;
 const hTrackGap = 148;
 
-const vAxisTop = 48;
-const vDateGap = 150;
-const vTaskTopOffset = 42;
-const vTrackLeft = 250;
-const vTrackGap = 260;
+const vAxisTop = 42;
+const vDateGap = 124;
+const vTaskTopOffset = 34;
+const vTrackLeft = 102;
+const vTrackGap = 208;
 
 const boardMinWidth = 1700;
 const boardMinHeight = 820;
@@ -90,6 +96,19 @@ function isVerticalMode() {
   return currentMode === "vertical";
 }
 
+function syncMetrics() {
+  if (isVerticalMode()) {
+    noteW = mobileNoteW;
+    noteH = mobileNoteH;
+  } else {
+    noteW = desktopNoteW;
+    noteH = desktopNoteH;
+  }
+
+  board.style.setProperty("--note-w", `${noteW}px`);
+  board.style.setProperty("--note-h", `${noteH}px`);
+}
+
 function makeTask({ title, parentId = null, targetAt = todayISO(), status = "todo", branchMode = "same" }) {
   return {
     id: id(),
@@ -123,6 +142,7 @@ function scheduleSave() {
 
 function load() {
   const raw = localStorage.getItem(STORAGE_KEY)
+    || localStorage.getItem("quest-sticky-todo-v9")
     || localStorage.getItem("quest-sticky-todo-v8")
     || localStorage.getItem("quest-sticky-todo-v6")
     || localStorage.getItem("quest-sticky-todo-v5")
@@ -265,6 +285,7 @@ function ensureContentSize() {
   currentMode = getLayoutMode();
   board.classList.toggle("verticalMode", isVerticalMode());
   board.classList.toggle("horizontalMode", !isVerticalMode());
+  syncMetrics();
 
   let farX = boardMinWidth;
   let farY = boardMinHeight;
@@ -276,8 +297,8 @@ function ensureContentSize() {
   }
 
   if (isVerticalMode()) {
-    const laneHeight = vAxisTop + Math.max(5, getLaneDates().length) * vDateGap + 230;
-    contentWidth = Math.max(boardMinWidth, farX, vTrackToX(maxTrack + 2) + noteW + 240);
+    const laneHeight = vAxisTop + Math.max(5, getLaneDates().length) * vDateGap + 220;
+    contentWidth = Math.max(720, farX, vTrackToX(maxTrack + 2) + noteW + 160);
     contentHeight = Math.max(boardMinHeight, farY, laneHeight);
   } else {
     const laneWidth = hAxisLeft + Math.max(5, getLaneDates().length) * hDateGap + 360;
@@ -285,7 +306,8 @@ function ensureContentSize() {
     contentHeight = Math.max(boardMinHeight, farY, hTrackToY(maxTrack + 2) + 180);
   }
 
-  [links, lanesEl, notesEl].forEach(el => {
+  [links, lanesEl, dateHud, notesEl].forEach(el => {
+    if (!el) return;
     el.style.minWidth = `${contentWidth}px`;
     el.style.minHeight = `${contentHeight}px`;
   });
@@ -404,9 +426,11 @@ function render() {
 
 function renderLanes() {
   lanesEl.innerHTML = "";
+  if (dateHud) dateHud.innerHTML = "";
   if (!state.showLanes) return;
 
-  const fragment = document.createDocumentFragment();
+  const laneFragment = document.createDocumentFragment();
+  const labelFragment = document.createDocumentFragment();
   const lanes = getLaneDates();
   const activeDate = activeTodayBandDate();
 
@@ -435,7 +459,7 @@ function renderLanes() {
       band.style.height = `${vDateGap}px`;
       line.style.top = `${y}px`;
       label.style.top = `${y + 8}px`;
-      label.style.left = "42px";
+      label.style.left = "14px";
     } else {
       const x = hAxisLeft + index * hDateGap;
       band.style.left = `${x}px`;
@@ -445,18 +469,35 @@ function renderLanes() {
       label.style.top = "12px";
     }
 
-    fragment.appendChild(band);
-    fragment.appendChild(line);
-    fragment.appendChild(label);
+    laneFragment.appendChild(band);
+    laneFragment.appendChild(line);
+    labelFragment.appendChild(label);
   });
 
   const endLine = document.createElement("div");
   endLine.className = "laneLine laneEndLine";
   if (isVerticalMode()) endLine.style.top = `${vEndLineY()}px`;
   else endLine.style.left = `${hEndLineX()}px`;
-  fragment.appendChild(endLine);
+  laneFragment.appendChild(endLine);
 
-  lanesEl.appendChild(fragment);
+  lanesEl.appendChild(laneFragment);
+  if (dateHud) dateHud.appendChild(labelFragment);
+  syncStickyDateLabels();
+}
+
+function syncStickyDateLabels() {
+  if (!dateHud) return;
+  const labels = dateHud.querySelectorAll(".laneLabel");
+  const x = board.scrollLeft;
+  const y = board.scrollTop;
+
+  labels.forEach(label => {
+    if (isVerticalMode()) {
+      label.style.transform = `translateX(${x}px)`;
+    } else {
+      label.style.transform = `translateY(${y}px)`;
+    }
+  });
 }
 
 function renderLinks() {
@@ -960,6 +1001,7 @@ function orderChildrenForLayout(taskId) {
 function branchLayout() {
   refreshLaneDates();
   currentMode = getLayoutMode();
+  syncMetrics();
 
   const roots = getRoots().sort(sortByDateThenTitle);
   let nextTrack = 0;
@@ -1150,8 +1192,10 @@ dateModal.addEventListener("pointerdown", event => {
 });
 
 board.addEventListener("pointerdown", event => {
-  if (event.target === board || event.target === notesEl || event.target === lanesEl) setSelected(null);
+  if (event.target === board || event.target === notesEl || event.target === lanesEl || event.target === dateHud) setSelected(null);
 });
+
+board.addEventListener("scroll", syncStickyDateLabels, { passive: true });
 
 window.addEventListener("keydown", event => {
   const tag = document.activeElement?.tagName;
