@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Quest Sticky ToDo v8</title>
-  <link rel="stylesheet" href="./style.css?v=20260628-08" />
+  <title>Quest Sticky ToDo v9</title>
+  <link rel="stylesheet" href="./style.css?v=20260628-09" />
 </head>
 <body>
   <div class="app">
@@ -23,6 +23,7 @@
         <button id="verticalLayoutBtn">縦整列</button>
         <button id="toggleLanesBtn">日付レーン ON</button>
         <button id="undoBtn">戻る</button>
+        <button id="deleteBtn" class="danger" disabled>削除</button>
         <button id="resetBtn" class="danger">リセット</button>
       </div>
     </header>
@@ -34,7 +35,7 @@
           <div id="monthName">May</div>
         </div>
         <div class="help">
-          PC: 付箋の＋を引っ張る → 分岐 / スマホ: 付箋を選択して＋をタップ → 同じブランチに追加
+          PC: Delete/Backspaceで選択タスク削除 / スマホ: タスク左上の×で削除 / 端の区切り線までが日付セル
         </div>
       </div>
 
@@ -80,6 +81,7 @@
     </div>
   </div>
 
-  <script src="./bootstrap.js?v=20260628-08"></script>
+  <script src="./app.js?v=20260628-09"></script>
+  <script src="./mobile.js?v=20260628-09"></script>
 </body>
 </html>
