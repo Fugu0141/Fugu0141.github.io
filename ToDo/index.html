@@ -3,106 +3,81 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Quest Sticky ToDo</title>
+  <title>Quest Sticky ToDo v2</title>
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
   <div class="app">
-    <header class="toolbar">
+    <header class="topbar">
       <div class="brand">
         <div class="logo">Q</div>
         <div>
           <h1>Quest Sticky ToDo</h1>
-          <p>付箋を引っ張って、タスクの枝を伸ばす。</p>
+          <p>付箋を引っ張って、ブランチを伸ばす。</p>
         </div>
       </div>
 
-      <div class="actions">
-        <button id="addRootBtn">＋ ルート付箋</button>
-        <button id="autoLayoutBtn">自動整列</button>
-        <button id="toggleLanesBtn">日付レーン: ON</button>
+      <div class="toolbar">
+        <button id="addRootBtn">＋ ルート</button>
+        <button id="treeLayoutBtn">自動整列</button>
+        <button id="verticalLayoutBtn">縦整列</button>
+        <button id="toggleLanesBtn">日付レーン ON</button>
         <button id="undoBtn">戻る</button>
         <button id="resetBtn" class="danger">リセット</button>
       </div>
     </header>
 
-    <main class="main">
-      <section class="boardWrap">
-        <div class="boardHeader">
-          <div class="monthBlock">
-            <div id="monthBig">5</div>
-            <div id="monthName">May</div>
-          </div>
-          <div class="hint">
-            付箋下の丸をドラッグ → 子タスク生成 / 付箋をドラッグ → 移動 / ダブルクリック → 編集 / 右クリック → 完了切替
-          </div>
+    <main class="stage">
+      <div class="stageHeader">
+        <div class="monthCard">
+          <div id="monthBig">5</div>
+          <div id="monthName">May</div>
         </div>
-
-        <div id="board" class="board">
-          <svg id="links" class="links"></svg>
-          <div id="lanes" class="lanes"></div>
-          <div id="notes" class="notes"></div>
-          <div id="ghost" class="ghost hidden">新しいタスク</div>
+        <div class="help">
+          付箋下の丸を引っ張る → 子タスク / 付箋を動かす → 日付変更 / ダブルクリック → 編集
         </div>
-      </section>
+      </div>
 
-      <aside class="side">
-        <section class="panel">
-          <h2>選択中</h2>
-          <div id="emptyInspector" class="empty">付箋を選ぶと詳細を編集できます。</div>
-          <form id="inspector" class="inspector hidden">
-            <label>
-              タイトル
-              <input id="titleInput" type="text" />
-            </label>
-            <label>
-              作成日
-              <input id="createdInput" type="date" />
-            </label>
-            <label>
-              目標日
-              <input id="targetInput" type="date" />
-            </label>
-            <label>
-              完了日
-              <input id="completedInput" type="date" />
-            </label>
-            <label>
-              状態
-              <select id="statusInput">
-                <option value="todo">未着手</option>
-                <option value="doing">進行中</option>
-                <option value="done">完了</option>
-              </select>
-            </label>
-            <label>
-              メモ
-              <textarea id="memoInput" rows="5"></textarea>
-            </label>
-          </form>
-        </section>
-
-        <section class="panel">
-          <h2>表示</h2>
-          <label class="selectLine">
-            縦位置に使う日付
-            <select id="dateModeInput">
-              <option value="targetAt">目標日</option>
-              <option value="createdAt">作成日</option>
-              <option value="completedAt">完了日</option>
-            </select>
-          </label>
-          <p class="small">
-            日付レーンをOFFにすると、日付なしのツリー整理モードになります。
-          </p>
-        </section>
-
-        <section class="panel historyPanel">
-          <h2>履歴</h2>
-          <div id="history"></div>
-        </section>
-      </aside>
+      <div id="board" class="board">
+        <svg id="links" class="links"></svg>
+        <div id="lanes" class="lanes"></div>
+        <div id="notes" class="notes"></div>
+        <div id="ghost" class="ghost hidden">新しいタスク</div>
+      </div>
     </main>
+  </div>
+
+  <div id="taskModal" class="modalBackdrop hidden">
+    <div class="modal">
+      <h2 id="taskModalTitle">タスクを作成</h2>
+      <label>
+        タスク名
+        <input id="taskNameInput" type="text" placeholder="例：ワーク12ページ" />
+      </label>
+      <label>
+        目標日
+        <input id="taskDateInput" type="date" />
+      </label>
+      <div class="modalActions">
+        <button id="taskCancelBtn" class="ghostBtn">キャンセル</button>
+        <button id="taskSaveBtn">決定</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="dateModal" class="modalBackdrop hidden">
+    <div class="modal smallModal">
+      <h2>日付を変更</h2>
+      <p class="modalText">区切り線や空白に置かれました。移動先の日付を選んでください。</p>
+      <label>
+        目標日
+        <input id="changeDateInput" type="date" />
+      </label>
+      <div class="modalActions">
+        <button id="dateCancelBtn" class="ghostBtn">戻す</button>
+        <button id="dateSaveBtn">変更</button>
+      </div>
+    </div>
   </div>
 
   <script src="./app.js"></script>
