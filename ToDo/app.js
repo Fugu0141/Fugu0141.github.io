@@ -1,4 +1,4 @@
-const STORAGE_KEY = "quest-sticky-todo-v5";
+const STORAGE_KEY = "quest-sticky-todo-v6";
 
 const board = document.getElementById("board");
 const links = document.getElementById("links");
@@ -153,6 +153,7 @@ function scheduleSave() {
 
 function load() {
   const raw = localStorage.getItem(STORAGE_KEY)
+    || localStorage.getItem("quest-sticky-todo-v5")
     || localStorage.getItem("quest-sticky-todo-v4")
     || localStorage.getItem("quest-sticky-todo-v3")
     || localStorage.getItem("quest-sticky-todo-v2");
@@ -423,14 +424,17 @@ function makeBranchPath(parent, child, color, width, dash) {
   if (sameTrack) {
     d = `M ${parent.x + noteW} ${parent.y + noteH / 2} L ${child.x} ${child.y + noteH / 2}`;
   } else if (sameDate) {
-    d = `M ${parent.x + noteW / 2} ${parent.y + noteH} L ${child.x + noteW / 2} ${child.y}`;
+    const x = parent.x + noteW / 2;
+    const y1 = parent.y + noteH;
+    const y2 = child.y;
+    d = `M ${x} ${y1} L ${x} ${y2}`;
   } else {
     const x1 = parent.x + noteW;
     const y1 = parent.y + noteH / 2;
     const x2 = child.x;
     const y2 = child.y + noteH / 2;
-    const midX = x1 + Math.max(28, (x2 - x1) * 0.38);
-    d = `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`;
+    const trunkX = Math.min(x2 - 24, x1 + 28);
+    d = `M ${x1} ${y1} L ${trunkX} ${y1} L ${trunkX} ${y2} L ${x2} ${y2}`;
   }
 
   return makePath(d, color, width, dash);
@@ -473,10 +477,10 @@ function updatePreviewBranch() {
   const y1 = parent.y + noteH / 2;
   const x2 = connectDrag.x;
   const y2 = mode === "same" ? y1 : connectDrag.y;
-  const midX = x1 + Math.max(28, (x2 - x1) * 0.38);
+  const trunkX = Math.min(x2 - 24, x1 + 28);
   const d = mode === "same"
     ? `M ${x1} ${y1} L ${x2} ${y1}`
-    : `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`;
+    : `M ${x1} ${y1} L ${trunkX} ${y1} L ${trunkX} ${y2} L ${x2} ${y2}`;
 
   ensurePreviewPath().setAttribute("d", d);
 }
@@ -723,6 +727,27 @@ function closeTaskModal() {
   taskModalContext = null;
 }
 
+function getSameBranchTail(startId, targetAt) {
+  let current = state.tasks[startId];
+  if (!current) return startId;
+
+  const target = normalizeDate(targetAt);
+  const seen = new Set();
+
+  while (current && !seen.has(current.id)) {
+    seen.add(current.id);
+    const next = getChildren(current.id)
+      .filter(child => child.branchMode === "same" && normalizeDate(child.targetAt) <= target)
+      .sort(sortByDateThenTitle)
+      .at(-1);
+
+    if (!next) break;
+    current = next;
+  }
+
+  return current ? current.id : startId;
+}
+
 function saveTaskModal() {
   const title = taskNameInput.value.trim() || "新しいタスク";
   const targetAt = normalizeDate(taskDateInput.value);
@@ -730,11 +755,16 @@ function saveTaskModal() {
   snapshot();
 
   if (taskModalMode === "create") {
+    const branchMode = taskModalContext.branchMode || "same";
+    const parentId = branchMode === "same" && taskModalContext.parentId
+      ? getSameBranchTail(taskModalContext.parentId, targetAt)
+      : taskModalContext.parentId;
+
     const task = makeTask({
       title,
-      parentId: taskModalContext.parentId,
+      parentId,
       targetAt,
-      branchMode: taskModalContext.branchMode || "same"
+      branchMode
     });
 
     state.tasks[task.id] = task;
@@ -807,6 +837,15 @@ function sortByDateThenTitle(a, b) {
   return String(a.title).localeCompare(String(b.title), "ja");
 }
 
+function orderChildrenForLayout(taskId) {
+  const children = getChildren(taskId).sort(sortByDateThenTitle);
+  if (children.length <= 1) return children;
+
+  const mainChild = children.find(child => child.branchMode === "same") || children[0];
+  const branches = children.filter(child => child.id !== mainChild.id);
+  return [mainChild, ...branches];
+}
+
 function branchLayout() {
   refreshLaneDates();
 
@@ -829,14 +868,16 @@ function assignBranchTracks(taskId, track, nextTrack) {
   if (!task) return nextTrack;
 
   task._track = track;
-  const children = getChildren(taskId).sort(sortByDateThenTitle);
+  const children = orderChildrenForLayout(taskId);
   if (!children.length) return Math.max(nextTrack, track + 1);
 
-  children.forEach((child, index) => {
-    const sameBranch = child.branchMode === "same" || (!child.branchMode && index === 0);
-    const childTrack = sameBranch ? track : nextTrack++;
-    nextTrack = assignBranchTracks(child.id, childTrack, nextTrack);
-  });
+  const mainChild = children[0];
+  nextTrack = assignBranchTracks(mainChild.id, track, Math.max(nextTrack, track + 1));
+
+  for (let i = 1; i < children.length; i++) {
+    const childTrack = nextTrack;
+    nextTrack = assignBranchTracks(children[i].id, childTrack, childTrack + 1);
+  }
 
   return Math.max(nextTrack, track + 1);
 }
