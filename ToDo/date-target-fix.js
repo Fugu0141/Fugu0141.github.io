@@ -7,8 +7,9 @@
   let recentHitAt = 0;
 
   function addDaysISO(date, days = 1) {
-    const d = new Date(`${normalizeDate(date)}T00:00:00`);
-    d.setDate(d.getDate() + days);
+    const [year, month, day] = normalizeDate(date).split("-").map(Number);
+    const d = new Date(Date.UTC(year, month - 1, day));
+    d.setUTCDate(d.getUTCDate() + days);
     return d.toISOString().slice(0, 10);
   }
 
