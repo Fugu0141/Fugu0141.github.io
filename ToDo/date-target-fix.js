@@ -17,16 +17,17 @@
       : Math.max(28, noteW * 0.13);
   }
 
-  function remember(hit, anchor) {
+  function remember(hit, anchor, boundaryIndex = null) {
     recentHit = hit;
     recentHitAt = Date.now();
     try {
-      window[recentHitKey] = { ...hit, anchor, at: recentHitAt };
+      window[recentHitKey] = { ...hit, anchor, boundaryIndex, at: recentHitAt };
     } catch (_) {}
 
     const hud = document.getElementById("dateDebugHud");
     if (hud && (drag || connectDrag)) {
-      hud.textContent = `date hit\nkind:${hit.kind}\ndate:${hit.date || "-"}\nmode:${hit.mode || "-"}\nanchor:${Math.round(anchor)}`;
+      const boundaryText = boundaryIndex == null ? "" : `\nboundary:${boundaryIndex}`;
+      hud.textContent = `date hit\nkind:${hit.kind}\ndate:${hit.date || "-"}\nmode:${hit.mode || "-"}\nanchor:${Math.round(anchor)}${boundaryText}`;
       hud.style.display = "block";
     }
   }
@@ -48,7 +49,18 @@
 
   function dateForBoundary(lanes, boundaryIndex) {
     if (boundaryIndex <= 0) return lanes[0] || todayISO();
-    return addDaysISO(lanes[boundaryIndex - 1], 1);
+
+    const previousNext = addDaysISO(lanes[boundaryIndex - 1], 1);
+    const previousNextIndex = lanes.indexOf(previousNext);
+
+    // If the calculated "previous day + 1" already exists as an earlier visible lane,
+    // returning it makes the target look one divider behind. In that case the divider
+    // should resolve to its own visible date.
+    if (previousNextIndex >= 0 && previousNextIndex < boundaryIndex) {
+      return lanes[boundaryIndex] || previousNext;
+    }
+
+    return previousNext;
   }
 
   function hitFromAnchor(anchor) {
@@ -63,13 +75,17 @@
     // This prevents the mobile area between two dividers from becoming line/blank accidentally.
     for (let i = 0; i < lines.length; i++) {
       if (Math.abs(anchor - lines[i]) <= tol) {
-        return { kind: "line", date: dateForBoundary(lanes, i), mode: "ask" };
+        const hit = { kind: "line", date: dateForBoundary(lanes, i), mode: "ask" };
+        hit._boundaryIndex = i;
+        return hit;
       }
     }
 
     // 2. Last boundary / outside the final lane.
     if (Math.abs(anchor - endLine) <= tol || anchor > endLine) {
-      return { kind: "blank", date: addDaysISO(lanes.at(-1), 1), mode: "ask" };
+      const hit = { kind: "blank", date: addDaysISO(lanes.at(-1), 1), mode: "ask" };
+      hit._boundaryIndex = lanes.length;
+      return hit;
     }
 
     // 3. Area between two date dividers is always that lane's date.
@@ -92,14 +108,16 @@
     }
 
     if (anchor <= lines[0]) return { kind: "lane", date: lanes[0], mode: "snap" };
-    return { kind: "blank", date: addDaysISO(lanes.at(-1), 1), mode: "ask" };
+    const hit = { kind: "blank", date: addDaysISO(lanes.at(-1), 1), mode: "ask" };
+    hit._boundaryIndex = lanes.length;
+    return hit;
   }
 
   hitTestDateArea = function(noteMainStart) {
     const size = isVerticalMode() ? noteH : noteW;
     const anchor = noteMainStart + size / 2;
     const hit = hitFromAnchor(anchor);
-    remember(hit, anchor);
+    remember(hit, anchor, hit._boundaryIndex ?? null);
     return hit;
   };
 
