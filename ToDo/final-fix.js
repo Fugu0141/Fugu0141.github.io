@@ -4,6 +4,20 @@
   const compactVGap = 92;
   const originalSetSelected = typeof setSelected === "function" ? setSelected : null;
 
+  let lastBoardPoint = null;
+
+  function updateLastBoardPoint(event) {
+    if (!event || typeof event.clientX !== "number") return;
+    const rect = board.getBoundingClientRect();
+    lastBoardPoint = {
+      x: event.clientX - rect.left + board.scrollLeft,
+      y: event.clientY - rect.top + board.scrollTop
+    };
+  }
+
+  window.addEventListener("pointermove", updateLastBoardPoint, true);
+  window.addEventListener("pointerup", updateLastBoardPoint, true);
+
   function readCollapsedDates() {
     try {
       return new Set(JSON.parse(localStorage.getItem(collapsedDoneDatesKey) || "[]"));
@@ -115,13 +129,22 @@
 
   function lineHitTolerance() {
     return isVerticalMode()
-      ? Math.max(34, noteH * 0.42)
-      : Math.max(50, noteW * 0.23);
+      ? Math.max(32, noteH * 0.38)
+      : Math.max(44, noteW * 0.20);
   }
 
   function nextDateAfterLine(lanes, index) {
     if (index <= 0) return lanes[0] || todayISO();
     return addDaysISO(lanes[index - 1], 1);
+  }
+
+  function shouldUsePointerAnchor() {
+    return !!lastBoardPoint && (typeof drag !== "undefined" && drag || typeof connectDrag !== "undefined" && connectDrag);
+  }
+
+  function getAnchorMain(noteMainStart) {
+    if (shouldUsePointerAnchor()) return isVerticalMode() ? lastBoardPoint.y : lastBoardPoint.x;
+    return noteMainStart + (isVerticalMode() ? noteH / 2 : noteW / 2);
   }
 
   hDateLineX = function(date) {
@@ -171,14 +194,14 @@
     if (!lanes.length) return { kind: "blank", date: todayISO() };
 
     const tolerance = lineHitTolerance();
+    const anchor = getAnchorMain(noteMainStart);
 
     if (isVerticalMode()) {
-      const anchorY = noteMainStart + noteH / 2;
       let nearestLineIndex = 0;
       let nearestLineDistance = Infinity;
 
       lanes.forEach((date, index) => {
-        const dist = Math.abs(anchorY - vDateLineY(date));
+        const dist = Math.abs(anchor - vDateLineY(date));
         if (dist < nearestLineDistance) {
           nearestLineDistance = dist;
           nearestLineIndex = index;
@@ -192,27 +215,27 @@
       for (const date of lanes) {
         const top = vDateLineY(date);
         const bottom = top + dateSpan(date);
-        if (anchorY >= top && anchorY < bottom) {
+        if (anchor >= top && anchor < bottom) {
+          const span = dateSpan(date);
           const forwardZone = isDateCollapsed(date)
-            ? dateSpan(date)
-            : Math.min(46, Math.max(30, dateSpan(date) * 0.28));
-          if (anchorY >= bottom - forwardZone) {
+            ? Math.max(38, span * 0.72)
+            : Math.min(span - 34, Math.max(56, span * 0.58));
+          if (anchor >= bottom - forwardZone) {
             return { kind: "blank", date: addDaysISO(date, 1) };
           }
           return { kind: "lane", date };
         }
       }
 
-      if (anchorY >= vEndLineY()) return { kind: "blank", date: addDaysISO(lanes.at(-1), 1) };
+      if (anchor >= vEndLineY()) return { kind: "blank", date: addDaysISO(lanes.at(-1), 1) };
       return { kind: "lane", date: lanes[0] };
     }
 
-    const anchorX = noteMainStart + noteW / 2;
     let nearestLineIndex = 0;
     let nearestLineDistance = Infinity;
 
     lanes.forEach((date, index) => {
-      const dist = Math.abs(anchorX - hDateLineX(date));
+      const dist = Math.abs(anchor - hDateLineX(date));
       if (dist < nearestLineDistance) {
         nearestLineDistance = dist;
         nearestLineIndex = index;
@@ -226,18 +249,19 @@
     for (const date of lanes) {
       const left = hDateLineX(date);
       const right = left + dateSpan(date);
-      if (anchorX >= left && anchorX < right) {
+      if (anchor >= left && anchor < right) {
+        const span = dateSpan(date);
         const forwardZone = isDateCollapsed(date)
-          ? dateSpan(date)
-          : Math.min(72, Math.max(42, dateSpan(date) * 0.28));
-        if (anchorX >= right - forwardZone) {
+          ? Math.max(58, span * 0.74)
+          : Math.min(span - 46, Math.max(110, span * 0.60));
+        if (anchor >= right - forwardZone) {
           return { kind: "blank", date: addDaysISO(date, 1) };
         }
         return { kind: "lane", date };
       }
     }
 
-    if (anchorX >= hEndLineX()) return { kind: "blank", date: addDaysISO(lanes.at(-1), 1) };
+    if (anchor >= hEndLineX()) return { kind: "blank", date: addDaysISO(lanes.at(-1), 1) };
     return { kind: "lane", date: lanes[0] };
   };
 
