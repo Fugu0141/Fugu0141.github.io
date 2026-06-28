@@ -3,8 +3,8 @@
 
   function lineHitTolerance() {
     return isVerticalMode()
-      ? Math.max(44, noteH * 0.55)
-      : Math.max(66, noteW * 0.30);
+      ? Math.max(38, noteH * 0.46)
+      : Math.max(54, noteW * 0.245);
   }
 
   hitTestDateArea = function(noteMainStart) {
