@@ -94,7 +94,7 @@
 
     for (let i = 0; i < lanes.length; i++) {
       const start = lines[i];
-      const end = i + 1 < lines.length ? lines[i + 1] : endLine;
+      const end = i + 1 < lanes.length ? lines[i + 1] : endLine;
       if (anchor >= start && anchor < end) {
         return { kind: "lane", date: lanes[i], targetDate: lanes[i], mode: "snap" };
       }
@@ -118,6 +118,42 @@
     const hit = hitTestDateArea(start);
     return hit.targetDate || hit.date || todayISO();
   };
+
+  function updateConnectGhostFreely(event) {
+    if (!connectDrag) return false;
+
+    const parent = state.tasks[connectDrag.parentId];
+    const point = boardPoint(event);
+
+    connectDrag.x = point.x;
+    connectDrag.y = point.y;
+
+    const hit = isVerticalMode()
+      ? hitTestDateArea(point.y - noteH / 2)
+      : hitTestDateArea(point.x - noteW / 2);
+    const nextHotLane = hit.kind === "lane" ? hit.date : null;
+    const nextHotLine = hit.kind === "line" ? hit.date : null;
+    const hotChanged = nextHotLane !== hotLaneDate || nextHotLine !== hotLineDate;
+
+    hotLaneDate = nextHotLane;
+    hotLineDate = nextHotLine;
+
+    const gx = point.x - noteW / 2;
+    const gy = point.y - noteH / 2;
+    setObjectPos(ghost, Math.max(40, gx), Math.max(30, gy));
+
+    if (parent) updatePreviewBranch();
+    if (hotChanged) renderLanes();
+
+    return true;
+  }
+
+  window.addEventListener("pointermove", event => {
+    if (!updateConnectGhostFreely(event)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+  }, true);
 
   if (originalOpenCreateTaskModal) {
     openCreateTaskModal = function(options = {}) {
