@@ -3,8 +3,10 @@
   const compactHGap = 132;
   const compactVGap = 92;
   const originalSetSelected = typeof setSelected === "function" ? setSelected : null;
+  const originalOpenCreateTaskModal = typeof openCreateTaskModal === "function" ? openCreateTaskModal : null;
 
   let lastDropHit = null;
+  let lastDropHitAt = 0;
 
   const debugHud = document.createElement("div");
   debugHud.id = "dateDebugHud";
@@ -25,28 +27,30 @@
   ].join(";");
   document.body.appendChild(debugHud);
 
-  function showDebug(hit, point = null) {
+  function rememberHit(hit, anchor = null) {
     lastDropHit = hit;
+    lastDropHitAt = Date.now();
+
     if (!hit || !(drag || connectDrag)) {
       debugHud.style.display = "none";
       return;
     }
 
-    const p = point ? `\nx:${Math.round(point.x)} y:${Math.round(point.y)}` : "";
-    debugHud.textContent = `date hit\nkind:${hit.kind}\ndate:${hit.date || "-"}\nmode:${hit.mode || "-"}${p}`;
+    const a = anchor == null ? "" : `\nanchor:${Math.round(anchor)}`;
+    debugHud.textContent = `date hit\nkind:${hit.kind}\ndate:${hit.date || "-"}\nmode:${hit.mode || "-"}${a}`;
     debugHud.style.display = "block";
   }
 
-  function hideDebug() {
-    debugHud.style.display = "none";
+  function hideDebugSoon() {
+    setTimeout(() => {
+      if (!(drag || connectDrag)) debugHud.style.display = "none";
+    }, 500);
   }
 
-  function boardPointNow(event) {
-    const rect = board.getBoundingClientRect();
-    return {
-      x: event.clientX - rect.left + board.scrollLeft,
-      y: event.clientY - rect.top + board.scrollTop
-    };
+  function addDaysISO(date, days = 1) {
+    const d = new Date(`${normalizeDate(date)}T00:00:00`);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
   }
 
   function readCollapsedDates() {
@@ -59,12 +63,6 @@
 
   function writeCollapsedDates(dates) {
     localStorage.setItem(collapsedDoneDatesKey, JSON.stringify([...dates]));
-  }
-
-  function addDaysISO(date, days = 1) {
-    const d = new Date(`${normalizeDate(date)}T00:00:00`);
-    d.setDate(d.getDate() + days);
-    return d.toISOString().slice(0, 10);
   }
 
   function tasksOnDate(date) {
@@ -83,10 +81,6 @@
     return isDateComplete(normalized) && readCollapsedDates().has(normalized);
   }
 
-  function isTaskCollapsed(task) {
-    return !!task && isDateCollapsed(task.targetAt);
-  }
-
   function setDateCollapsed(date, collapsed) {
     const normalized = normalizeDate(date);
     const dates = readCollapsedDates();
@@ -101,9 +95,14 @@
     else setDateCollapsed(normalized, false);
   }
 
+  function isTaskCollapsed(task) {
+    return !!task && isDateCollapsed(task.targetAt);
+  }
+
   function dateSpan(date) {
-    if (isVerticalMode()) return isDateCollapsed(date) ? compactVGap : vDateGap;
-    return isDateCollapsed(date) ? compactHGap : hDateGap;
+    return isVerticalMode()
+      ? isDateCollapsed(date) ? compactVGap : vDateGap
+      : isDateCollapsed(date) ? compactHGap : hDateGap;
   }
 
   function taskToneClass(task) {
@@ -144,8 +143,8 @@
 
   function lineHitTolerance() {
     return isVerticalMode()
-      ? Math.max(32, noteH * 0.38)
-      : Math.max(44, noteW * 0.20);
+      ? Math.max(28, noteH * 0.34)
+      : Math.max(38, noteW * 0.18);
   }
 
   function nextDateAfterLine(lanes, index) {
@@ -193,7 +192,7 @@
     return y;
   };
 
-  function hitFromMainAnchor(anchor) {
+  function hitFromAnchor(anchor) {
     if (!state.showLanes) return { kind: "none", date: null, mode: "free" };
 
     const lanes = getLaneDates();
@@ -202,9 +201,12 @@
     const tolerance = lineHitTolerance();
 
     if (isVerticalMode()) {
+      if (anchor >= vEndLineY() - tolerance) {
+        return { kind: "blank", date: addDaysISO(lanes.at(-1), 1), mode: "ask" };
+      }
+
       let nearestLineIndex = 0;
       let nearestLineDistance = Infinity;
-
       lanes.forEach((date, index) => {
         const dist = Math.abs(anchor - vDateLineY(date));
         if (dist < nearestLineDistance) {
@@ -223,8 +225,8 @@
         if (anchor >= top && anchor < bottom) {
           const span = dateSpan(date);
           const forwardZone = isDateCollapsed(date)
-            ? Math.max(38, span * 0.72)
-            : Math.min(span - 34, Math.max(56, span * 0.58));
+            ? span
+            : Math.min(span - 28, Math.max(42, span * 0.38));
           if (anchor >= bottom - forwardZone) {
             return { kind: "blank", date: addDaysISO(date, 1), mode: "ask" };
           }
@@ -232,13 +234,16 @@
         }
       }
 
-      if (anchor >= vEndLineY()) return { kind: "blank", date: addDaysISO(lanes.at(-1), 1), mode: "ask" };
+      if (anchor > vEndLineY()) return { kind: "blank", date: addDaysISO(lanes.at(-1), 1), mode: "ask" };
       return { kind: "lane", date: lanes[0], mode: "snap" };
+    }
+
+    if (anchor >= hEndLineX() - tolerance) {
+      return { kind: "blank", date: addDaysISO(lanes.at(-1), 1), mode: "ask" };
     }
 
     let nearestLineIndex = 0;
     let nearestLineDistance = Infinity;
-
     lanes.forEach((date, index) => {
       const dist = Math.abs(anchor - hDateLineX(date));
       if (dist < nearestLineDistance) {
@@ -257,8 +262,8 @@
       if (anchor >= left && anchor < right) {
         const span = dateSpan(date);
         const forwardZone = isDateCollapsed(date)
-          ? Math.max(58, span * 0.74)
-          : Math.min(span - 46, Math.max(110, span * 0.60));
+          ? span
+          : Math.min(span - 36, Math.max(66, span * 0.34));
         if (anchor >= right - forwardZone) {
           return { kind: "blank", date: addDaysISO(date, 1), mode: "ask" };
         }
@@ -266,98 +271,43 @@
       }
     }
 
-    if (anchor >= hEndLineX()) return { kind: "blank", date: addDaysISO(lanes.at(-1), 1), mode: "ask" };
+    if (anchor > hEndLineX()) return { kind: "blank", date: addDaysISO(lanes.at(-1), 1), mode: "ask" };
     return { kind: "lane", date: lanes[0], mode: "snap" };
   }
 
-  function hitFromBoardPoint(point) {
-    const anchor = isVerticalMode() ? point.y : point.x;
-    return hitFromMainAnchor(anchor);
-  }
-
   hitTestDateArea = function(noteMainStart) {
-    const anchor = noteMainStart + (isVerticalMode() ? noteH / 2 : noteW / 2);
-    const hit = hitFromMainAnchor(anchor);
-    showDebug(hit);
+    const leadOffset = isVerticalMode() ? 20 : 20;
+    const anchor = noteMainStart + leadOffset;
+    const hit = hitFromAnchor(anchor);
+    rememberHit(hit, anchor);
     return hit;
   };
 
   getDateForPointer = function(event) {
-    const point = boardPointNow(event);
-    const hit = hitFromBoardPoint(point);
-    showDebug(hit, point);
+    const point = boardPoint(event);
+    const leadStart = isVerticalMode() ? point.y - noteH / 2 : point.x - noteW / 2;
+    const hit = hitTestDateArea(leadStart);
     return hit.date || todayISO();
   };
 
-  window.addEventListener("pointermove", event => {
-    if (!(drag || connectDrag)) return;
-    const point = boardPointNow(event);
-    showDebug(hitFromBoardPoint(point), point);
-  }, true);
+  if (originalOpenCreateTaskModal) {
+    openCreateTaskModal = function(options = {}) {
+      const next = { ...options };
+      const recentBoundaryHit = lastDropHit
+        && lastDropHit.mode === "ask"
+        && lastDropHit.date
+        && Date.now() - lastDropHitAt < 1200;
 
-  window.addEventListener("pointerup", event => {
-    if (!(drag || connectDrag)) {
-      hideDebug();
-      return;
-    }
-
-    const point = boardPointNow(event);
-    const hit = hitFromBoardPoint(point);
-    showDebug(hit, point);
-
-    event.preventDefault();
-    event.stopPropagation();
-    event.stopImmediatePropagation();
-
-    if (drag) {
-      const task = state.tasks[drag.id];
-      const currentDrag = drag;
-
-      if (drag.moved && task) {
-        snapshot();
-
-        if (state.showLanes && hit.mode === "snap") {
-          task.targetAt = hit.date;
-          if (isVerticalMode()) task.y = vDateToY(hit.date);
-          else task.x = hDateToX(hit.date);
-          drag = null;
-          finishDragUI(currentDrag);
-          branchLayout();
-          requestRender();
-        } else if (state.showLanes && hit.mode === "ask") {
-          drag = null;
-          finishDragUI(currentDrag);
-          openChangeDateModal(task.id, hit.date || todayISO(), currentDrag.original);
-        } else {
-          drag = null;
-          finishDragUI(currentDrag);
-          requestRender();
-        }
-      } else {
-        drag = null;
-        finishDragUI(currentDrag);
+      if (next.parentId && recentBoundaryHit && normalizeDate(next.targetAt) === todayISO()) {
+        next.targetAt = lastDropHit.date;
       }
-    }
 
-    if (connectDrag) {
-      const parent = state.tasks[connectDrag.parentId];
-      const parentId = connectDrag.parentId;
-      const branchMode = parent ? inferBranchMode(parent, point) : "same";
-      const targetAt = hit.date || todayISO();
+      return originalOpenCreateTaskModal(next);
+    };
+  }
 
-      connectDrag = null;
-      ghost.classList.add("hidden");
-      if (previewPath) previewPath.remove();
-      previewPath = null;
-      hotLaneDate = null;
-      hotLineDate = null;
-      renderLanes();
-
-      openCreateTaskModal({ parentId, targetAt, branchMode });
-    }
-
-    setTimeout(hideDebug, 450);
-  }, true);
+  window.addEventListener("pointerup", hideDebugSoon, true);
+  window.addEventListener("pointercancel", hideDebugSoon, true);
 
   renderLinks = function() {
     previewPath = null;
@@ -370,7 +320,6 @@
 
     for (const task of getTasks()) {
       if (isTaskCollapsed(task)) continue;
-
       const visibleParent = findVisibleParent(task);
       if (!visibleParent) continue;
 
