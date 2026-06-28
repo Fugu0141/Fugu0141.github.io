@@ -1,6 +1,7 @@
 (() => {
   const recentHitKey = "questStickyRecentDateHit";
   const originalOpenCreateTaskModal = typeof openCreateTaskModal === "function" ? openCreateTaskModal : null;
+  const originalOpenChangeDateModal = typeof openChangeDateModal === "function" ? openChangeDateModal : null;
 
   let recentHit = null;
   let recentHitAt = 0;
@@ -26,8 +27,9 @@
 
     const hud = document.getElementById("dateDebugHud");
     if (hud && (drag || connectDrag)) {
+      const targetText = hit.targetDate && hit.targetDate !== hit.date ? `\ntarget:${hit.targetDate}` : "";
       const boundaryText = boundaryIndex == null ? "" : `\nboundary:${boundaryIndex}`;
-      hud.textContent = `date hit\nkind:${hit.kind}\ndate:${hit.date || "-"}\nmode:${hit.mode || "-"}\nanchor:${Math.round(anchor)}${boundaryText}`;
+      hud.textContent = `date hit\nkind:${hit.kind}\nline:${hit.date || "-"}${targetText}\nmode:${hit.mode || "-"}\nanchor:${Math.round(anchor)}${boundaryText}`;
       hud.style.display = "block";
     }
   }
@@ -47,70 +49,58 @@
     return { lanes, lines, endLine };
   }
 
-  function dateForBoundary(lanes, boundaryIndex) {
+  function targetDateForBoundary(lanes, boundaryIndex) {
     if (boundaryIndex <= 0) return lanes[0] || todayISO();
+    return addDaysISO(lanes[boundaryIndex - 1], 1);
+  }
 
-    const previousNext = addDaysISO(lanes[boundaryIndex - 1], 1);
-    const previousNextIndex = lanes.indexOf(previousNext);
+  function makeLineHit(lanes, boundaryIndex) {
+    const lineDate = lanes[boundaryIndex] || lanes.at(-1) || todayISO();
+    const targetDate = targetDateForBoundary(lanes, boundaryIndex);
+    const hit = { kind: "line", date: lineDate, targetDate, mode: "ask" };
+    hit._boundaryIndex = boundaryIndex;
+    return hit;
+  }
 
-    // If the calculated "previous day + 1" already exists as an earlier visible lane,
-    // returning it makes the target look one divider behind. In that case the divider
-    // should resolve to its own visible date.
-    if (previousNextIndex >= 0 && previousNextIndex < boundaryIndex) {
-      return lanes[boundaryIndex] || previousNext;
-    }
-
-    return previousNext;
+  function makeBlankHit(lanes) {
+    const targetDate = addDaysISO(lanes.at(-1), 1);
+    const hit = { kind: "blank", date: targetDate, targetDate, mode: "ask" };
+    hit._boundaryIndex = lanes.length;
+    return hit;
   }
 
   function hitFromAnchor(anchor) {
-    if (!state.showLanes) return { kind: "none", date: null, mode: "free" };
+    if (!state.showLanes) return { kind: "none", date: null, targetDate: null, mode: "free" };
 
     const { lanes, lines, endLine } = buildIntervals();
-    if (!lanes.length) return { kind: "blank", date: todayISO(), mode: "ask" };
+    if (!lanes.length) return { kind: "blank", date: todayISO(), targetDate: todayISO(), mode: "ask" };
 
     const tol = lineTolerance();
 
-    // 1. Exact boundary zone. Only a narrow zone around the actual divider is line mode.
-    // This prevents the mobile area between two dividers from becoming line/blank accidentally.
     for (let i = 0; i < lines.length; i++) {
-      if (Math.abs(anchor - lines[i]) <= tol) {
-        const hit = { kind: "line", date: dateForBoundary(lanes, i), mode: "ask" };
-        hit._boundaryIndex = i;
-        return hit;
-      }
+      if (Math.abs(anchor - lines[i]) <= tol) return makeLineHit(lanes, i);
     }
 
-    // 2. Last boundary / outside the final lane.
-    if (Math.abs(anchor - endLine) <= tol || anchor > endLine) {
-      const hit = { kind: "blank", date: addDaysISO(lanes.at(-1), 1), mode: "ask" };
-      hit._boundaryIndex = lanes.length;
-      return hit;
-    }
+    if (Math.abs(anchor - endLine) <= tol || anchor > endLine) return makeBlankHit(lanes);
 
-    // 3. Area between two date dividers is always that lane's date.
-    // Do not create an inner forward/blank zone inside the lane.
     for (let i = 0; i < lanes.length; i++) {
       const start = lines[i];
       const end = i + 1 < lines.length ? lines[i + 1] : endLine;
       if (anchor > start + tol && anchor < end - tol) {
-        return { kind: "lane", date: lanes[i], mode: "snap" };
+        return { kind: "lane", date: lanes[i], targetDate: lanes[i], mode: "snap" };
       }
     }
 
-    // 4. Gap just before a boundary that was not caught by tolerance still belongs to the lane.
     for (let i = 0; i < lanes.length; i++) {
       const start = lines[i];
       const end = i + 1 < lines.length ? lines[i + 1] : endLine;
       if (anchor >= start && anchor < end) {
-        return { kind: "lane", date: lanes[i], mode: "snap" };
+        return { kind: "lane", date: lanes[i], targetDate: lanes[i], mode: "snap" };
       }
     }
 
-    if (anchor <= lines[0]) return { kind: "lane", date: lanes[0], mode: "snap" };
-    const hit = { kind: "blank", date: addDaysISO(lanes.at(-1), 1), mode: "ask" };
-    hit._boundaryIndex = lanes.length;
-    return hit;
+    if (anchor <= lines[0]) return { kind: "lane", date: lanes[0], targetDate: lanes[0], mode: "snap" };
+    return makeBlankHit(lanes);
   }
 
   hitTestDateArea = function(noteMainStart) {
@@ -125,7 +115,7 @@
     const point = boardPoint(event);
     const start = isVerticalMode() ? point.y - noteH / 2 : point.x - noteW / 2;
     const hit = hitTestDateArea(start);
-    return hit.date || todayISO();
+    return hit.targetDate || hit.date || todayISO();
   };
 
   if (originalOpenCreateTaskModal) {
@@ -133,11 +123,20 @@
       const next = { ...options };
       const hit = recentHit || window[recentHitKey];
       const at = recentHitAt || hit?.at || 0;
-      const fresh = hit && hit.date && hit.mode === "ask" && Date.now() - at < 1500;
-      if (next.parentId && fresh && normalizeDate(next.targetAt) === todayISO()) {
-        next.targetAt = hit.date;
-      }
+      const targetDate = hit?.targetDate || hit?.date;
+      const fresh = hit && targetDate && hit.mode === "ask" && Date.now() - at < 1500;
+      if (next.parentId && fresh && normalizeDate(next.targetAt) === todayISO()) next.targetAt = targetDate;
       return originalOpenCreateTaskModal(next);
+    };
+  }
+
+  if (originalOpenChangeDateModal) {
+    openChangeDateModal = function(taskId, defaultDate, original) {
+      const hit = recentHit || window[recentHitKey];
+      const at = recentHitAt || hit?.at || 0;
+      const targetDate = hit?.targetDate || hit?.date;
+      const fresh = hit && targetDate && hit.mode === "ask" && Date.now() - at < 1500;
+      return originalOpenChangeDateModal(taskId, fresh ? targetDate : defaultDate, original);
     };
   }
 })();
