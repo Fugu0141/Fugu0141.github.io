@@ -46,6 +46,18 @@
     return isDateComplete(normalized) && !expandedDoneDates.has(normalized);
   }
 
+  function isTaskCollapsed(task) {
+    return task && isDateCollapsed(task.targetAt);
+  }
+
+  function findVisibleParent(task) {
+    let parent = task?.parentId ? state.tasks[task.parentId] : null;
+    while (parent && isTaskCollapsed(parent)) {
+      parent = parent.parentId ? state.tasks[parent.parentId] : null;
+    }
+    return parent;
+  }
+
   function dateSpan(date) {
     if (isVerticalMode()) return isDateCollapsed(date) ? compactVGap : vDateGap;
     return isDateCollapsed(date) ? compactHGap : hDateGap;
@@ -122,6 +134,11 @@
       : Math.max(50, noteW * 0.23);
   }
 
+  function nextDateAfterLine(lanes, index) {
+    if (index <= 0) return lanes[0] || todayISO();
+    return addDaysISO(lanes[index - 1], 1);
+  }
+
   hDateLineX = function(date) {
     const target = normalizeDate(date);
     let x = hAxisLeft;
@@ -172,23 +189,33 @@
 
     if (isVerticalMode()) {
       const anchorY = noteMainStart + noteH / 2;
-      let nearestLine = null;
+      let nearestLineIndex = 0;
       let nearestLineDistance = Infinity;
 
-      for (const date of lanes) {
+      lanes.forEach((date, index) => {
         const dist = Math.abs(anchorY - vDateLineY(date));
         if (dist < nearestLineDistance) {
           nearestLineDistance = dist;
-          nearestLine = date;
+          nearestLineIndex = index;
         }
-      }
+      });
 
-      if (nearestLineDistance <= tolerance) return { kind: "line", date: nearestLine };
+      if (nearestLineDistance <= tolerance) {
+        return { kind: "line", date: nextDateAfterLine(lanes, nearestLineIndex) };
+      }
 
       for (const date of lanes) {
         const top = vDateLineY(date);
         const bottom = top + dateSpan(date);
-        if (anchorY >= top && anchorY < bottom) return { kind: "lane", date };
+        if (anchorY >= top && anchorY < bottom) {
+          const forwardZone = isDateCollapsed(date)
+            ? dateSpan(date)
+            : Math.min(46, Math.max(30, dateSpan(date) * 0.28));
+          if (anchorY >= bottom - forwardZone) {
+            return { kind: "blank", date: addDaysISO(date, 1) };
+          }
+          return { kind: "lane", date };
+        }
       }
 
       if (anchorY >= vEndLineY()) return { kind: "blank", date: addDaysISO(lanes.at(-1), 1) };
@@ -196,23 +223,33 @@
     }
 
     const anchorX = noteMainStart + noteW / 2;
-    let nearestLine = null;
+    let nearestLineIndex = 0;
     let nearestLineDistance = Infinity;
 
-    for (const date of lanes) {
+    lanes.forEach((date, index) => {
       const dist = Math.abs(anchorX - hDateLineX(date));
       if (dist < nearestLineDistance) {
         nearestLineDistance = dist;
-        nearestLine = date;
+        nearestLineIndex = index;
       }
-    }
+    });
 
-    if (nearestLineDistance <= tolerance) return { kind: "line", date: nearestLine };
+    if (nearestLineDistance <= tolerance) {
+      return { kind: "line", date: nextDateAfterLine(lanes, nearestLineIndex) };
+    }
 
     for (const date of lanes) {
       const left = hDateLineX(date);
       const right = left + dateSpan(date);
-      if (anchorX >= left && anchorX < right) return { kind: "lane", date };
+      if (anchorX >= left && anchorX < right) {
+        const forwardZone = isDateCollapsed(date)
+          ? dateSpan(date)
+          : Math.min(72, Math.max(42, dateSpan(date) * 0.28));
+        if (anchorX >= right - forwardZone) {
+          return { kind: "blank", date: addDaysISO(date, 1) };
+        }
+        return { kind: "lane", date };
+      }
     }
 
     if (anchorX >= hEndLineX()) return { kind: "blank", date: addDaysISO(lanes.at(-1), 1) };
@@ -336,18 +373,24 @@
     const related = collectRelatedIds(selectedId);
 
     for (const task of getTasks()) {
-      if (!task.parentId || !state.tasks[task.parentId]) continue;
-      const parent = state.tasks[task.parentId];
-      const path = makeBranchPath(parent, task, "#191919", 4, "");
+      if (isTaskCollapsed(task)) continue;
+
+      const visibleParent = findVisibleParent(task);
+      if (!visibleParent) continue;
+
+      const path = makeBranchPath(visibleParent, task, "#191919", 4, "");
       path.classList.add("linkPath");
 
-      if (selectedId && related.has(parent.id) && related.has(task.id)) {
+      const compressed = visibleParent.id !== task.parentId;
+      if (compressed) path.classList.add("compressedLink");
+
+      if (selectedId && related.has(visibleParent.id) && related.has(task.id)) {
         path.classList.add("focusedLink");
-      } else if (isDateCollapsed(parent.targetAt) || isDateCollapsed(task.targetAt)) {
+      } else if (compressed || isDateCollapsed(visibleParent.targetAt) || isDateCollapsed(task.targetAt)) {
         path.classList.add("collapsedLink");
       } else if (selectedId) {
         path.classList.add("mutedLink");
-      } else if (task.status === "done" && parent.status === "done") {
+      } else if (task.status === "done" && visibleParent.status === "done") {
         path.classList.add("doneLink");
       } else {
         path.classList.add("defaultLink");
@@ -397,6 +440,7 @@
         const oldDate = normalizeDate(task.targetAt);
         task.status = task.status === "done" ? "todo" : "done";
         autoFoldCompleteDate(oldDate);
+        branchLayout();
         requestRender();
       });
       el.appendChild(done);
