@@ -17,6 +17,12 @@
     localStorage.setItem(expandedDoneDatesKey, JSON.stringify([...expandedDoneDates]));
   }
 
+  function addDaysISO(date, days = 1) {
+    const d = new Date(`${normalizeDate(date)}T00:00:00`);
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
   function tasksOnDate(date) {
     const normalized = normalizeDate(date);
     return getTasks().filter(task => normalizeDate(task.targetAt) === normalized);
@@ -25,6 +31,13 @@
   function isDateComplete(date) {
     const tasks = tasksOnDate(date);
     return tasks.length > 0 && tasks.every(task => task.status === "done");
+  }
+
+  function autoFoldCompleteDate(date) {
+    const normalized = normalizeDate(date);
+    if (!isDateComplete(normalized)) return;
+    expandedDoneDates.delete(normalized);
+    saveExpandedDoneDates();
   }
 
   function isDateCollapsed(date) {
@@ -178,7 +191,7 @@
         if (anchorY >= top && anchorY < bottom) return { kind: "lane", date };
       }
 
-      if (anchorY >= vEndLineY()) return { kind: "blank", date: lanes.at(-1) };
+      if (anchorY >= vEndLineY()) return { kind: "blank", date: addDaysISO(lanes.at(-1), 1) };
       return { kind: "lane", date: lanes[0] };
     }
 
@@ -202,7 +215,7 @@
       if (anchorX >= left && anchorX < right) return { kind: "lane", date };
     }
 
-    if (anchorX >= hEndLineX()) return { kind: "blank", date: lanes.at(-1) };
+    if (anchorX >= hEndLineX()) return { kind: "blank", date: addDaysISO(lanes.at(-1), 1) };
     return { kind: "lane", date: lanes[0] };
   };
 
@@ -328,10 +341,10 @@
       const path = makeBranchPath(parent, task, "#191919", 4, "");
       path.classList.add("linkPath");
 
-      if (isDateCollapsed(parent.targetAt) || isDateCollapsed(task.targetAt)) {
-        path.classList.add("collapsedLink");
-      } else if (selectedId && related.has(parent.id) && related.has(task.id)) {
+      if (selectedId && related.has(parent.id) && related.has(task.id)) {
         path.classList.add("focusedLink");
+      } else if (isDateCollapsed(parent.targetAt) || isDateCollapsed(task.targetAt)) {
+        path.classList.add("collapsedLink");
       } else if (selectedId) {
         path.classList.add("mutedLink");
       } else if (task.status === "done" && parent.status === "done") {
@@ -381,7 +394,9 @@
       done.addEventListener("click", event => {
         event.stopPropagation();
         snapshot();
+        const oldDate = normalizeDate(task.targetAt);
         task.status = task.status === "done" ? "todo" : "done";
+        autoFoldCompleteDate(oldDate);
         requestRender();
       });
       el.appendChild(done);
