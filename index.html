@@ -197,6 +197,53 @@
       font-size: 0.78rem;
       color: #9a7b8a;
     }
+
+    .sponsor-card {
+      background: white;
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0, 80, 120, 0.10);
+    }
+
+    .sponsor-description {
+      margin: 0 0 18px;
+      color: #40515c;
+      line-height: 1.7;
+    }
+
+    .sponsor-iframe-wrap {
+      display: flex;
+      justify-content: center;
+      overflow: hidden;
+      border-radius: 12px;
+      background: #0d1117;
+    }
+
+    .sponsor-iframe {
+      display: block;
+      width: 100%;
+      max-width: 600px;
+      height: 225px;
+      border: 0;
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        padding: 24px 14px;
+      }
+
+      .profile-card {
+        padding: 24px 18px;
+      }
+
+      .sponsor-card {
+        padding: 16px;
+      }
+
+      .sponsor-iframe {
+        height: 280px;
+      }
+    }
   </style>
 </head>
 
@@ -230,6 +277,25 @@
             <div class="marshmallow-link-title">マシュマロを送る</div>
           </div>
         </a>
+      </div>
+    </section>
+
+    <!-- GitHub Sponsors -->
+    <h2 class="section-title">GitHub Sponsors</h2>
+
+    <section class="sponsor-card">
+      <p class="sponsor-description">
+        Cherryをはじめとするオープンソース開発を応援していただけると嬉しいです。
+      </p>
+      <div class="sponsor-iframe-wrap">
+        <iframe
+          class="sponsor-iframe"
+          src="https://github.com/sponsors/Fugu0141/card"
+          title="Sponsor Fugu0141"
+          height="225"
+          width="600"
+          loading="lazy"
+        ></iframe>
       </div>
     </section>
 
