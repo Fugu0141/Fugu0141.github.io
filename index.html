@@ -5,23 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ふぐ / Fugu</title>
 
+  <meta name="description" content="ふぐの自己紹介ページです。SNSリンクや制作物をまとめています。">
 
+  <!-- OGP -->
+  <meta property="og:title" content="ふぐ / Fugu">
+  <meta property="og:description" content="SNSリンクや制作物をまとめています。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://fugu0141.github.io/">
+  <meta property="og:image" content="https://fugu0141.github.io/image/preview.png">
 
-<meta name="description" content="ふぐの自己紹介ページです。SNSリンクや制作物をまとめています。">
-
-<!-- OGP -->
-<meta property="og:title" content="ふぐ / Fugu">
-<meta property="og:description" content="SNSリンクや制作物をまとめています。">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://fugu0141.github.io/">
-<meta property="og:image" content="https://fugu0141.github.io/image/preview.png">
-
-<!-- X / Twitter Card -->
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="ふぐ / Fugu">
-<meta name="twitter:description" content="SNSリンクや制作物をまとめています。">
-<meta name="twitter:image" content="https://fugu0141.github.io/image/preview.png">
-
+  <!-- X / Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ふぐ / Fugu">
+  <meta name="twitter:description" content="SNSリンクや制作物をまとめています。">
+  <meta name="twitter:image" content="https://fugu0141.github.io/image/preview.png">
 
   <style>
     * {
@@ -274,19 +271,42 @@
       position: relative;
       z-index: 1;
       flex-shrink: 0;
-      padding: 7px;
-      border-radius: 10px;
-      background: white;
-      box-shadow: 0 5px 16px rgba(40, 50, 60, 0.10);
-      line-height: 0;
     }
 
     .sponsor-button {
-      display: block;
-      width: 114px;
-      height: 32px;
-      border: 0;
-      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-width: 132px;
+      height: 46px;
+      padding: 0 18px;
+      border: 1px solid #efbad3;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #fff8fc 0%, #ffe9f4 100%);
+      color: #9d3e70;
+      font-size: 0.95rem;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 5px 16px rgba(194, 77, 136, 0.14);
+      transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .sponsor-button:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(135deg, #fff2f9 0%, #ffdeed 100%);
+      box-shadow: 0 9px 22px rgba(194, 77, 136, 0.20);
+    }
+
+    .sponsor-button:focus-visible {
+      outline: 3px solid rgba(110, 214, 255, 0.55);
+      outline-offset: 3px;
+    }
+
+    .sponsor-button-heart {
+      font-size: 1.25rem;
+      font-weight: 400;
+      line-height: 1;
     }
 
     @media (max-width: 640px) {
@@ -313,6 +333,17 @@
         margin-left: 68px;
       }
     }
+
+    @media (max-width: 420px) {
+      .sponsor-action {
+        width: 100%;
+        margin-left: 0;
+      }
+
+      .sponsor-button {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 
@@ -328,7 +359,7 @@
 
       <div class="intro-box">
          プログラミング、Linux、Unityなど、気になったものをいろいろ触っています。<br>
-         それ以外にも、コーヒーやゲームなど趣味が非常に多い人間です。<br></br>
+         それ以外にも、コーヒーやゲームなど趣味が非常に多い人間です。<br><br>
         「挑戦」と「貢献」をモットーに、誰かの役に立てる技術者を目指しています。<br>
         （社会貢献の一環として個人で寄付も行っています）
       </div>
@@ -365,15 +396,16 @@
       </div>
 
       <div class="sponsor-action">
-        <iframe
+        <a
           class="sponsor-button"
-          src="https://github.com/sponsors/Fugu0141/button"
-          title="Sponsor Fugu0141"
-          height="32"
-          width="114"
-          loading="lazy"
-          scrolling="no"
-        ></iframe>
+          href="https://github.com/sponsors/Fugu0141"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="GitHub SponsorsでFugu0141を支援する"
+        >
+          <span class="sponsor-button-heart" aria-hidden="true">♡</span>
+          <span>Sponsor</span>
+        </a>
       </div>
     </section>
 
@@ -403,7 +435,6 @@
           ※基本的に初心者向けの内容を書いています。
         </div>
       </a>
-
 
       <a class="sns-card" href="https://www.pixiv.net/users/97150843" target="_blank" rel="noopener noreferrer">
         <div class="sns-name">pixiv</div>
