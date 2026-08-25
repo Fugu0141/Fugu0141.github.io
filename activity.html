@@ -3,63 +3,29 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>活動 | ふぐ / Fugu</title>
-<meta name="description" content="ふぐ / Fugu の最近のGitHub公開活動とCommit Reef。">
-<link rel="stylesheet" href="assets/styles.css"><link rel="stylesheet" href="assets/activity-reef.css">
-<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js" defer></script><script src="assets/site.js" defer></script><script src="assets/activity-reef.js" defer></script>
+<meta name="description" content="ふぐ / Fugu のGitHub活動を、日ごとの活動量から一枚の絵として可視化しています。">
+<link rel="stylesheet" href="assets/styles.css"><link rel="stylesheet" href="assets/activity-art.css">
+<script src="https://cdn.jsdelivr.net/npm/p5@1/lib/p5.min.js" defer></script><script src="assets/site.js" defer></script><script src="assets/activity-art.js" defer></script>
 </head>
 <body data-lang="ja" data-page="activity"><div class="paper-glow"></div><div id="p5-bg"></div><header data-site-header></header>
 <main>
 <section class="shell page-hero reveal">
   <span class="kicker"><span class="lang-ja">活動</span><span class="lang-en">Activity</span></span>
   <h1><span class="lang-ja">いま、<br>動いていること。</span><span class="lang-en">What's<br>moving now.</span></h1>
-  <p class="lang-ja">GitHubで積み重なっていくCommitやBranchを、ただの一覧ではなく「海の中で育つもの」として眺められるページにしました。</p>
-  <p class="lang-en">A view of GitHub commits and branches as something growing underwater, rather than another plain activity list.</p>
-  <div class="hero-sticker" aria-hidden="true">↗</div>
+  <p class="lang-ja">GitHubで積み重なる日々の活動を、数字や一覧ではなく、一枚の絵にしています。</p>
+  <p class="lang-en">Daily GitHub activity, turned into a picture instead of another chart or list.</p>
+  <div class="hero-sticker" aria-hidden="true">●</div>
 </section>
 
-<section class="shell reef-section">
-  <div class="reef-heading reveal">
-    <div>
-      <span class="kicker"><span class="lang-ja">コミットリーフ</span><span class="lang-en">Commit Reef</span></span>
-      <h2><span class="lang-ja">Commitが、<br>海の中で育つ。</span><span class="lang-en">Commits,<br>growing underwater.</span></h2>
-    </div>
-    <p class="lang-ja">サンゴ1株が1つのRepository。そこから分かれる枝が実際のBranch。そして枝についた小さな四角が1つのCommitです。GitHubの構造を、そのまま海の景色に置き換えています。</p>
-    <p class="lang-en">Each coral colony is a repository. Its stems are real Git branches, and every small glowing square is one commit. GitHub's structure becomes an underwater landscape.</p>
+<section class="shell activity-art-section">
+  <div class="activity-art-frame reveal">
+    <canvas class="activity-art-canvas" data-activity-art role="img" aria-label="GitHub activity visualized as a colorful dotted pufferfish. Each dot represents one day and its color reflects activity level."></canvas>
+    <span class="activity-art-orbit one" aria-hidden="true"></span>
+    <span class="activity-art-orbit two" aria-hidden="true"></span>
+    <span class="activity-art-orbit three" aria-hidden="true"></span>
+    <div class="activity-art-palette" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
   </div>
-
-  <div class="reef-window reveal" data-commit-reef>
-    <div class="reef-toolbar">
-      <div class="reef-live"><i></i><span>RECENT PUBLIC COMMITS</span></div>
-      <div class="reef-stats">
-        <span class="reef-stat"><b data-reef-commits>—</b><small>commits</small></span>
-        <span class="reef-stat"><b data-reef-repos>—</b><small>repositories</small></span>
-        <span class="reef-stat"><b data-reef-branches>—</b><small>branches</small></span>
-      </div>
-    </div>
-    <div class="reef-canvas-wrap">
-      <svg class="reef-svg" data-reef-svg viewBox="0 0 1000 560" role="img" aria-label="Recent GitHub commits visualized as an underwater coral reef"></svg>
-      <div class="reef-loading" data-reef-loading><span class="lang-ja">海の中にCommitを育てています…</span><span class="lang-en">Growing commits under the sea…</span></div>
-      <div class="reef-tooltip" data-reef-tooltip hidden></div>
-    </div>
-    <div class="reef-legend">
-      <span><i class="reef-legend-square"></i><span class="lang-ja">四角 = Commit</span><span class="lang-en">Square = Commit</span></span>
-      <span><i class="reef-legend-line"></i><span class="lang-ja">枝 = Branch</span><span class="lang-en">Stem = Branch</span></span>
-      <span><i class="reef-legend-base"></i><span class="lang-ja">サンゴ = Repository</span><span class="lang-en">Coral = Repository</span></span>
-    </div>
-  </div>
-  <p class="reef-note lang-ja">四角に触れるとCommit内容を表示します。クリックするとGitHub上の該当Commitへ移動します。</p>
-  <p class="reef-note lang-en">Hover a square to inspect the commit, or click it to open the commit on GitHub.</p>
-</section>
-
-<section class="shell activity-stream-section">
-  <div class="activity-stream-head reveal">
-    <h2><span class="lang-ja">そのほかの、<br>小さな動き。</span><span class="lang-en">Other small<br>movements.</span></h2>
-    <p class="lang-ja">Pull RequestやIssueなど、Commit以外の公開活動はこちらに流れてきます。</p>
-    <p class="lang-en">Pull requests, issues, and other public GitHub activity continue below.</p>
-  </div>
-  <div data-github-activity class="activity-list reveal"><p class="loading"><span class="lang-ja">GitHubから取得しています…</span><span class="lang-en">Loading from GitHub…</span></p></div>
-  <p class="reef-note lang-ja">※ GitHub APIの仕様により、表示に時間差がある場合があります。</p>
-  <p class="reef-note lang-en">GitHub API data may be delayed.</p>
+  <div class="activity-art-footer"><a class="activity-art-github" href="https://github.com/Fugu0141" target="_blank" rel="noopener" aria-label="GitHub">↗</a></div>
 </section>
 </main>
 <footer data-site-footer></footer>
