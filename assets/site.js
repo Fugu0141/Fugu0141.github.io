@@ -1,31 +1,98 @@
 document.addEventListener('DOMContentLoaded',()=>{
-  const observer=new IntersectionObserver((entries)=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')}),{threshold:.12});
+  const saved=localStorage.getItem('fugu-language');
+  const initial=saved==='en'?'en':'ja';
+  setLanguage(initial);
+
+  document.querySelectorAll('[data-lang-button]').forEach(button=>{
+    button.addEventListener('click',()=>setLanguage(button.dataset.langButton));
+  });
+
+  const observer=new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{if(entry.isIntersecting)entry.target.classList.add('visible')});
+  },{threshold:.08});
   document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
 
-  if(window.matchMedia('(max-width: 900px)').matches){
-    const links=[['HOME','index.html'],['PROJECTS','projects.html'],['ACTIVITY','activity.html'],['LAB','lab.html'],['PRINCIPLES','principles.html'],['ABOUT','about.html'],['LINKS','links.html']];
-    const dock=document.createElement('nav');dock.setAttribute('aria-label','Mobile navigation');
-    Object.assign(dock.style,{position:'fixed',left:'12px',right:'12px',bottom:'12px',zIndex:'50',display:'flex',gap:'6px',overflowX:'auto',padding:'8px',border:'1px solid rgba(255,255,255,.9)',borderRadius:'18px',background:'rgba(246,252,255,.9)',backdropFilter:'blur(18px)',boxShadow:'0 16px 42px rgba(44,112,147,.18)'});
-    links.forEach(([label,href])=>{const a=document.createElement('a');a.href=href;a.textContent=label;Object.assign(a.style,{flex:'0 0 auto',padding:'9px 10px',borderRadius:'11px',textDecoration:'none',fontSize:'11px',fontWeight:'800',letterSpacing:'.05em',color:location.pathname.endsWith(href)||(!location.pathname.split('/').pop()&&href==='index.html')?'#fff':'#4c6d80',background:location.pathname.endsWith(href)||(!location.pathname.split('/').pop()&&href==='index.html')?'linear-gradient(135deg,#168ed0,#7758e8)':'rgba(255,255,255,.72)'});dock.appendChild(a)});
-    document.body.appendChild(dock);document.body.style.paddingBottom='78px';
-  }
-
-  const target=document.querySelector('[data-github-activity]');
-  if(target){
-    fetch('https://api.github.com/users/Fugu0141/events/public?per_page=8',{headers:{Accept:'application/vnd.github+json'}})
-      .then(r=>{if(!r.ok)throw new Error('GitHub API');return r.json()})
-      .then(events=>{
-        if(!events.length){target.innerHTML='<p class="loading">No recent public activity.</p>';return}
-        target.innerHTML=events.map(event=>{
-          const when=new Intl.DateTimeFormat('ja-JP',{month:'short',day:'numeric'}).format(new Date(event.created_at));
-          const repo=event.repo?.name||'GitHub';let text=event.type.replace('Event','');
-          if(event.type==='PushEvent') text=`${event.payload?.commits?.length||1} commit(s) pushed`;
-          if(event.type==='PullRequestEvent') text=`Pull request ${event.payload?.action||''}`;
-          if(event.type==='IssuesEvent') text=`Issue ${event.payload?.action||''}`;
-          return `<article class="activity-item"><div class="activity-time">${when}</div><div class="activity-node"></div><div class="activity-body"><strong>${escapeHtml(repo)}</strong><p>${escapeHtml(text)}</p></div></article>`
-        }).join('')
-      }).catch(()=>{target.innerHTML='<p class="loading">GitHub activity is temporarily unavailable.</p>'});
-  }
+  loadGitHubActivity();
 });
+
+function setLanguage(lang){
+  const value=lang==='en'?'en':'ja';
+  document.documentElement.lang=value;
+  document.body.dataset.lang=value;
+  localStorage.setItem('fugu-language',value);
+  document.querySelectorAll('[data-lang-button]').forEach(button=>{
+    const active=button.dataset.langButton===value;
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-pressed',String(active));
+  });
+  if(window.__githubEvents)renderGitHubActivity(window.__githubEvents);
+}
+
+function loadGitHubActivity(){
+  const target=document.querySelector('[data-github-activity]');
+  if(!target)return;
+  fetch('https://api.github.com/users/Fugu0141/events/public?per_page=8',{headers:{Accept:'application/vnd.github+json'}})
+    .then(response=>{if(!response.ok)throw new Error('GitHub API');return response.json()})
+    .then(events=>{window.__githubEvents=events;renderGitHubActivity(events)})
+    .catch(()=>{
+      const ja='<p class="loading">現在、GitHubの活動を取得できません。</p>';
+      const en='<p class="loading">GitHub activity is temporarily unavailable.</p>';
+      target.innerHTML=document.body.dataset.lang==='en'?en:ja;
+    });
+}
+
+function renderGitHubActivity(events){
+  const target=document.querySelector('[data-github-activity]');
+  if(!target)return;
+  const lang=document.body.dataset.lang==='en'?'en':'ja';
+  if(!events.length){target.innerHTML=`<p class="loading">${lang==='ja'?'最近の公開活動はありません。':'No recent public activity.'}</p>`;return}
+  const locale=lang==='ja'?'ja-JP':'en-US';
+  target.innerHTML=events.map(event=>{
+    const when=new Intl.DateTimeFormat(locale,{month:'short',day:'numeric'}).format(new Date(event.created_at));
+    const repo=event.repo?.name||'GitHub';
+    const text=eventText(event,lang);
+    return `<article class="activity-item"><div class="activity-time">${escapeHtml(when)}</div><div class="activity-body"><strong>${escapeHtml(repo)}</strong><p>${escapeHtml(text)}</p></div></article>`;
+  }).join('');
+}
+
+function eventText(event,lang){
+  const count=event.payload?.commits?.length||1;
+  if(event.type==='PushEvent')return lang==='ja'?`${count}件のコミットをPush`:`Pushed ${count} commit${count===1?'':'s'}`;
+  if(event.type==='PullRequestEvent')return lang==='ja'?`Pull Requestを${actionJa(event.payload?.action)}しました`:`Pull request ${event.payload?.action||'updated'}`;
+  if(event.type==='IssuesEvent')return lang==='ja'?`Issueを${actionJa(event.payload?.action)}しました`:`Issue ${event.payload?.action||'updated'}`;
+  if(event.type==='CreateEvent')return lang==='ja'?'リポジトリまたはブランチを作成':'Created a repository or branch';
+  if(event.type==='WatchEvent')return lang==='ja'?'リポジトリをStar':'Starred a repository';
+  if(event.type==='ForkEvent')return lang==='ja'?'リポジトリをFork':'Forked a repository';
+  return lang==='ja'?'GitHub上で公開活動がありました':event.type.replace('Event','');
+}
+
+function actionJa(action){
+  return ({opened:'作成',closed:'終了',reopened:'再開',synchronize:'更新',created:'作成',edited:'編集',deleted:'削除'})[action]||'更新';
+}
+
 function escapeHtml(value){return String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-if(window.p5&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){new p5(p=>{let points=[];const reset=()=>{points=[];const count=Math.max(28,Math.min(72,Math.floor((p.windowWidth*p.windowHeight)/26000)));for(let i=0;i<count;i++)points.push({x:p.random(p.width),y:p.random(p.height),vx:p.random(-.18,.18),vy:p.random(-.18,.18),r:p.random(1.3,3.2)})};p.setup=()=>{const c=p.createCanvas(p.windowWidth,p.windowHeight);c.parent('p5-bg');p.pixelDensity(Math.min(window.devicePixelRatio||1,1.5));reset()};p.draw=()=>{p.clear();for(let i=0;i<points.length;i++){const a=points[i];a.x+=a.vx;a.y+=a.vy;if(a.x<0||a.x>p.width)a.vx*=-1;if(a.y<0||a.y>p.height)a.vy*=-1;for(let j=i+1;j<points.length;j++){const b=points[j],d=p.dist(a.x,a.y,b.x,b.y);if(d<125){p.stroke(42,147,196,p.map(d,0,125,34,0));p.strokeWeight(.7);p.line(a.x,a.y,b.x,b.y)}}p.noStroke();p.fill(72,170,214,85);p.circle(a.x,a.y,a.r*2)}if(p.mouseX>=0&&p.mouseY>=0&&p.mouseX<p.width&&p.mouseY<p.height){for(const a of points){const d=p.dist(a.x,a.y,p.mouseX,p.mouseY);if(d<170){p.stroke(119,88,232,p.map(d,0,170,52,0));p.line(a.x,a.y,p.mouseX,p.mouseY)}}}};p.windowResized=()=>{p.resizeCanvas(p.windowWidth,p.windowHeight);reset()}})}
+
+if(window.p5&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+  new p5(p=>{
+    let dots=[];
+    const reset=()=>{
+      dots=[];
+      const count=Math.max(14,Math.min(30,Math.floor((p.windowWidth*p.windowHeight)/50000)));
+      for(let i=0;i<count;i++)dots.push({x:p.random(p.width),y:p.random(p.height),vx:p.random(-.08,.08),vy:p.random(-.08,.08)});
+    };
+    p.setup=()=>{const canvas=p.createCanvas(p.windowWidth,p.windowHeight);canvas.parent('p5-bg');p.pixelDensity(1);reset()};
+    p.draw=()=>{
+      p.clear();
+      dots.forEach((a,i)=>{
+        a.x+=a.vx;a.y+=a.vy;
+        if(a.x<0||a.x>p.width)a.vx*=-1;if(a.y<0||a.y>p.height)a.vy*=-1;
+        for(let j=i+1;j<dots.length;j++){
+          const b=dots[j],d=p.dist(a.x,a.y,b.x,b.y);
+          if(d<150){p.stroke(74,154,193,p.map(d,0,150,25,0));p.strokeWeight(.55);p.line(a.x,a.y,b.x,b.y)}
+        }
+        p.noStroke();p.fill(55,143,188,55);p.circle(a.x,a.y,3);
+      });
+    };
+    p.windowResized=()=>{p.resizeCanvas(p.windowWidth,p.windowHeight);reset()};
+  });
+}
