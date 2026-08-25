@@ -1,9 +1,7 @@
 const NAV_ITEMS=[
-  ['home','index.html','ホーム','Home'],
   ['projects','projects.html','制作','Projects'],
   ['activity','activity.html','活動','Activity'],
   ['principles','principles.html','理念','Principles'],
-  ['about','about.html','プロフィール','About'],
   ['links','links.html','リンク','Links']
 ];
 
@@ -26,12 +24,12 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 function renderChrome(){
-  const current=document.body.dataset.page||'home';
+  const current=document.body.dataset.page||'';
   const header=document.querySelector('[data-site-header]');
   if(header){
     header.className='site-header';
     header.innerHTML=`<div class="shell header-inner">
-      <a class="brand" href="index.html"><span class="brand-dot"></span>Fugu</a>
+      <a class="brand" href="index.html" aria-label="Fugu profile"><span class="brand-dot"></span>Fugu</a>
       <nav class="nav-links" aria-label="Main navigation">
         ${NAV_ITEMS.map(([id,href,ja,en])=>`<a href="${href}"${id===current?' aria-current="page"':''}><span class="lang-ja">${ja}</span><span class="lang-en">${en}</span></a>`).join('')}
       </nav>
@@ -100,7 +98,7 @@ function actionJa(action){
   return ({opened:'作成',closed:'終了',reopened:'再開',synchronize:'更新',created:'作成',edited:'編集',deleted:'削除'})[action]||'更新';
 }
 
-function escapeHtml(value){return String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+function escapeHtml(value){return String(value).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]))}
 
 if(window.p5&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
   new p5(p=>{
