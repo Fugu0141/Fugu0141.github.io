@@ -59,7 +59,8 @@ function setLanguage(lang){
 function loadGitHubActivity(){
   const target=document.querySelector('[data-github-activity]');
   if(!target)return;
-  fetch('https://api.github.com/users/Fugu0141/events/public?per_page=10',{headers:{Accept:'application/vnd.github+json'}})
+  const count=document.querySelector('[data-commit-reef]')?30:10;
+  fetch(`https://api.github.com/users/Fugu0141/events/public?per_page=${count}`,{headers:{Accept:'application/vnd.github+json'}})
     .then(response=>{if(!response.ok)throw new Error('GitHub API');return response.json()})
     .then(events=>{window.__githubEvents=events;renderGitHubActivity(events)})
     .catch(()=>{
@@ -73,9 +74,12 @@ function renderGitHubActivity(events){
   const target=document.querySelector('[data-github-activity]');
   if(!target)return;
   const lang=document.body.dataset.lang==='en'?'en':'ja';
-  if(!events.length){target.innerHTML=`<p class="loading">${lang==='ja'?'最近の公開活動はありません。':'No recent public activity.'}</p>`;return}
+  const visibleEvents=document.querySelector('[data-commit-reef]')
+    ? events.filter(event=>event.type!=='PushEvent').slice(0,10)
+    : events;
+  if(!visibleEvents.length){target.innerHTML=`<p class="loading">${lang==='ja'?'最近の公開活動はありません。':'No recent public activity.'}</p>`;return}
   const locale=lang==='ja'?'ja-JP':'en-US';
-  target.innerHTML=events.map(event=>{
+  target.innerHTML=visibleEvents.map(event=>{
     const when=new Intl.DateTimeFormat(locale,{month:'short',day:'numeric'}).format(new Date(event.created_at));
     const repo=event.repo?.name||'GitHub';
     return `<article class="activity-item"><div class="activity-time">${escapeHtml(when)}</div><div class="activity-body"><strong>${escapeHtml(repo)}</strong><p>${escapeHtml(eventText(event,lang))}</p></div></article>`;
