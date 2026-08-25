@@ -10,20 +10,22 @@ document.addEventListener('DOMContentLoaded',()=>{
   let cssWidth=0,cssHeight=0,dpr=1;
   let pointer={x:-9999,y:-9999,active:false};
   let pulse=0;
-  let start=performance.now();
+  const start=performance.now();
 
   resize();
-  const ro=new ResizeObserver(resize);ro.observe(canvas);
+  const ro=new ResizeObserver(()=>{resize();if(reduced)draw(performance.now())});ro.observe(canvas);
 
   canvas.addEventListener('pointermove',e=>{
     const r=canvas.getBoundingClientRect();
     pointer.x=e.clientX-r.left;pointer.y=e.clientY-r.top;pointer.active=true;
+    if(reduced)draw(performance.now());
   });
-  canvas.addEventListener('pointerleave',()=>{pointer.active=false});
-  canvas.addEventListener('pointerdown',()=>{pulse=1});
+  canvas.addEventListener('pointerleave',()=>{pointer.active=false;if(reduced)draw(performance.now())});
+  canvas.addEventListener('pointerdown',()=>{pulse=1;if(reduced)draw(performance.now())});
 
   loadActivity(points.length).then(counts=>{
     dailyLevels=buildLevels(points.length,counts);
+    if(reduced)draw(performance.now());
   }).catch(()=>{});
 
   function resize(){
@@ -49,8 +51,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     ];
     ctx.save();
     bubbles.forEach(([nx,ny,r,phase])=>{
-      const x=art.x+art.w*nx+Math.sin(t*.55+phase)*4;
-      const y=art.y+art.h*ny+Math.cos(t*.42+phase)*7;
+      const x=art.x+art.w*nx+(reduced?0:Math.sin(t*.55+phase)*4);
+      const y=art.y+art.h*ny+(reduced?0:Math.cos(t*.42+phase)*7);
       ctx.strokeStyle='rgba(105,215,221,.22)';ctx.lineWidth=1.2;
       ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
     });
