@@ -5,21 +5,17 @@ document.addEventListener('DOMContentLoaded',()=>{
   const DAY_COUNT=365;
   const ctx=canvas.getContext('2d');
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const palette=['#e8f1f3','#70d5df','#5d84ea','#9278ef','#ff7a72','#ffd65a'];
-  const landDots=buildLandDots();
-  const activityPoints=buildActivitySphere(DAY_COUNT);
+  const palette=['#eee5e8','#f8dce6','#f4bfd1','#ee9cba','#e873a2','#d64f8d'];
+  const blossomPoints=buildBlossomPoints();
+  const fallingPetals=buildFallingPetals(16);
 
   let cssWidth=0,cssHeight=0,dpr=1;
   let levels=new Array(DAY_COUNT).fill(0);
-  let totalContributions=0;
   let activeDays=0;
-  let oceanDepth=.28;
-  let targetOceanDepth=.28;
+  let totalContributions=0;
   let reveal=0;
+  let dataReady=false;
   let pulse=0;
-  let manualRotation=0;
-  let spinVelocity=0;
-  let drag=null;
   let pointer={x:-9999,y:-9999,active:false};
   const start=performance.now();
 
@@ -32,42 +28,25 @@ document.addEventListener('DOMContentLoaded',()=>{
     pointer.x=event.clientX-rect.left;
     pointer.y=event.clientY-rect.top;
     pointer.active=true;
-    if(drag){
-      const dx=event.clientX-drag.lastX;
-      drag.lastX=event.clientX;
-      drag.distance+=Math.abs(dx);
-      manualRotation+=dx*.0065;
-      spinVelocity=dx*.0008;
-    }
     if(reduced)draw(performance.now());
   });
-
   canvas.addEventListener('pointerleave',()=>{
     pointer.active=false;
-    if(!drag&&reduced)draw(performance.now());
-  });
-
-  canvas.addEventListener('pointerdown',event=>{
-    drag={lastX:event.clientX,distance:0};
-    canvas.setPointerCapture?.(event.pointerId);
-  });
-
-  const finishPointer=event=>{
-    if(drag&&drag.distance<8)pulse=1;
-    drag=null;
-    try{canvas.releasePointerCapture?.(event.pointerId)}catch{}
     if(reduced)draw(performance.now());
-  };
-  canvas.addEventListener('pointerup',finishPointer);
-  canvas.addEventListener('pointercancel',finishPointer);
+  });
+  canvas.addEventListener('pointerdown',()=>{
+    pulse=1;
+    if(reduced)draw(performance.now());
+  });
 
   loadContributionData(DAY_COUNT).then(result=>{
     levels=result.levels;
-    totalContributions=result.totalContributions;
     activeDays=result.activeDays;
-    targetOceanDepth=activityToOceanDepth(totalContributions,activeDays);
+    totalContributions=result.totalContributions;
+    dataReady=true;
+    if(reduced)reveal=1;
     console.info(`[Fugu Activity] source=${result.source}, activeDays=${activeDays}/${DAY_COUNT}, total=${totalContributions}`);
-    if(reduced){oceanDepth=targetOceanDepth;reveal=1;draw(performance.now())}
+    if(reduced)draw(performance.now());
   }).catch(error=>console.warn('[Fugu Activity] contribution data could not be loaded',error));
 
   function resize(){
@@ -86,250 +65,277 @@ document.addEventListener('DOMContentLoaded',()=>{
     const scene=layout(cssWidth,cssHeight);
 
     if(!reduced){
-      oceanDepth+=(targetOceanDepth-oceanDepth)*.025;
-      reveal+=(1-reveal)*.028;
-      if(!drag){
-        manualRotation+=spinVelocity;
-        spinVelocity*=.965;
-      }
-      pulse*=.92;
+      if(dataReady)reveal+=(1-reveal)*.026;
+      pulse*=.91;
     }
 
     drawAmbient(scene,t);
-    drawOrbitBack(scene,t);
-    drawPlanet(scene,t);
-    drawOrbitFront(scene,t);
+    drawGround(scene);
+    drawTree(scene,t);
+    drawBlossoms(scene,t);
+    drawFallingPetals(scene,t);
 
     if(!reduced)requestAnimationFrame(draw);
   }
 
   function drawAmbient(scene,t){
-    const glow=ctx.createRadialGradient(scene.cx,scene.cy+scene.r*.72,10,scene.cx,scene.cy+scene.r*.72,scene.r*2.15);
-    glow.addColorStop(0,'rgba(105,215,221,.15)');
-    glow.addColorStop(.48,'rgba(105,215,221,.045)');
-    glow.addColorStop(1,'rgba(105,215,221,0)');
+    const glow=ctx.createRadialGradient(scene.cx-scene.treeW*.18,scene.baseY-scene.treeH*.16,10,scene.cx-scene.treeW*.18,scene.baseY-scene.treeH*.16,scene.treeW*.72);
+    glow.addColorStop(0,'rgba(244,191,209,.15)');
+    glow.addColorStop(.55,'rgba(244,191,209,.035)');
+    glow.addColorStop(1,'rgba(244,191,209,0)');
     ctx.fillStyle=glow;
     ctx.beginPath();
-    ctx.arc(scene.cx,scene.cy+scene.r*.65,scene.r*2.2,0,Math.PI*2);
+    ctx.arc(scene.cx-scene.treeW*.14,scene.baseY-scene.treeH*.28,scene.treeW*.64,0,Math.PI*2);
     ctx.fill();
 
-    const bubbles=[
-      [.10,.20,15,.2],[.18,.72,6,.8],[.84,.21,8,1.4],[.90,.67,13,2.1],
-      [.75,.82,4,2.7],[.31,.17,4,3.2],[.63,.12,6,3.9],[.25,.86,8,4.4]
-    ];
+    const circles=[[.10,.19,12,.2],[.17,.73,5,.8],[.86,.20,7,1.5],[.91,.66,10,2.1],[.76,.82,4,2.8]];
     ctx.save();
-    ctx.strokeStyle='rgba(105,215,221,.14)';
+    ctx.strokeStyle='rgba(232,115,162,.075)';
+    ctx.lineWidth=1.05;
+    circles.forEach(([nx,ny,r,phase])=>{
+      const dx=reduced?0:Math.sin(t*.31+phase)*4;
+      const dy=reduced?0:Math.cos(t*.27+phase)*5;
+      ctx.beginPath();
+      ctx.arc(cssWidth*nx+dx,cssHeight*ny+dy,r,0,Math.PI*2);
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  function drawGround(scene){
+    ctx.save();
+    const shadow=ctx.createRadialGradient(scene.cx,scene.baseY+9,5,scene.cx,scene.baseY+9,scene.treeW*.26);
+    shadow.addColorStop(0,'rgba(72,50,57,.095)');
+    shadow.addColorStop(1,'rgba(72,50,57,0)');
+    ctx.fillStyle=shadow;
+    ctx.beginPath();
+    ctx.ellipse(scene.cx,scene.baseY+12,scene.treeW*.27,scene.treeH*.035,0,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.strokeStyle='rgba(84,67,74,.08)';
     ctx.lineWidth=1.1;
-    bubbles.forEach(([nx,ny,r,phase])=>{
-      const driftX=reduced?0:Math.sin(t*.36+phase)*5;
-      const driftY=reduced?0:Math.cos(t*.31+phase)*7;
-      ctx.beginPath();
-      ctx.arc(cssWidth*nx+driftX,cssHeight*ny+driftY,r,0,Math.PI*2);
-      ctx.stroke();
-    });
-    ctx.restore();
-  }
-
-  function drawPlanet(scene,t){
-    const autoRotation=reduced?0:t*.075;
-    const rotation=autoRotation+manualRotation;
-    const hover=pointer.active?Math.max(0,1-Math.hypot(pointer.x-scene.cx,pointer.y-scene.cy)/(scene.r*1.35)):0;
-    const bob=reduced?0:Math.sin(t*.62)*3;
-    const cy=scene.cy+bob;
-    const r=scene.r*(1+hover*.012+pulse*.014);
-
-    ctx.save();
-    ctx.fillStyle='rgba(22,70,106,.10)';
-    ctx.filter='blur(10px)';
     ctx.beginPath();
-    ctx.ellipse(scene.cx,cy+r*1.16,r*.76,r*.12,0,0,Math.PI*2);
-    ctx.fill();
-    ctx.filter='none';
-    ctx.restore();
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(scene.cx,cy,r,0,Math.PI*2);
-    ctx.clip();
-
-    drawOcean(scene.cx,cy,r);
-    drawSeaCurrents(scene.cx,cy,r,t);
-    drawLand(scene.cx,cy,r,rotation);
-    drawContributionLights(scene.cx,cy,r,rotation,t);
-    drawSphereLight(scene.cx,cy,r);
-    ctx.restore();
-
-    const atmosphere=ctx.createRadialGradient(scene.cx-r*.3,cy-r*.35,r*.08,scene.cx,cy,r*1.08);
-    atmosphere.addColorStop(0,'rgba(255,255,255,.12)');
-    atmosphere.addColorStop(.73,'rgba(255,255,255,.015)');
-    atmosphere.addColorStop(1,'rgba(83,151,229,.16)');
-    ctx.fillStyle=atmosphere;
-    ctx.beginPath();
-    ctx.arc(scene.cx,cy,r*1.018,0,Math.PI*2);
-    ctx.fill();
-
-    ctx.strokeStyle='rgba(38,105,170,.14)';
-    ctx.lineWidth=2.2;
-    ctx.beginPath();
-    ctx.arc(scene.cx,cy,r-1,0,Math.PI*2);
+    ctx.moveTo(scene.cx-scene.treeW*.31,scene.baseY+4);
+    ctx.quadraticCurveTo(scene.cx,scene.baseY-8,scene.cx+scene.treeW*.31,scene.baseY+3);
     ctx.stroke();
-
-    if(pulse>.002&&!reduced){
-      ctx.strokeStyle=`rgba(255,214,90,${.20*pulse})`;
-      ctx.lineWidth=2;
-      ctx.beginPath();
-      ctx.arc(scene.cx,cy,r+10+(1-pulse)*28,0,Math.PI*2);
-      ctx.stroke();
-    }
+    ctx.restore();
   }
 
-  function drawOcean(cx,cy,r){
-    const light=mixColor('#eaf9fb','#63cae7',oceanDepth);
-    const middle=mixColor('#dcf3f7','#348fdf',oceanDepth);
-    const deep=mixColor('#cceaf2','#205fc4',oceanDepth);
-    const ocean=ctx.createLinearGradient(cx-r*.9,cy-r*.9,cx+r*.8,cy+r*.85);
-    ocean.addColorStop(0,light);
-    ocean.addColorStop(.48,middle);
-    ocean.addColorStop(1,deep);
-    ctx.fillStyle=ocean;
-    ctx.fillRect(cx-r,cy-r,r*2,r*2);
-  }
-
-  function drawSeaCurrents(cx,cy,r,t){
+  function drawTree(scene,t){
+    const wind=reduced?0:Math.sin(t*.63)*.0028;
     ctx.save();
-    ctx.strokeStyle='rgba(255,255,255,.065)';
-    ctx.lineWidth=Math.max(1,r*.006);
     ctx.lineCap='round';
-    const drift=reduced?0:Math.sin(t*.32)*r*.02;
-    const curves=[
-      [-.88,-.24,-.28,-.38,.32,-.08,.86,-.18],
-      [-.82,.18,-.30,.02,.30,.32,.82,.15],
-      [-.58,.52,-.18,.38,.26,.58,.62,.46]
-    ];
-    curves.forEach(c=>{
+    ctx.lineJoin='round';
+
+    const trunkWidth=Math.max(13,scene.treeW*.024);
+    ctx.strokeStyle='#58454b';
+    ctx.lineWidth=trunkWidth;
+    ctx.beginPath();
+    ctx.moveTo(px(scene,0),py(scene,0));
+    ctx.bezierCurveTo(px(scene,-.018),py(scene,-.16),px(scene,.012),py(scene,-.36),px(scene,-.012),py(scene,-.515));
+    ctx.stroke();
+
+    ctx.strokeStyle='rgba(255,255,255,.13)';
+    ctx.lineWidth=Math.max(1.5,trunkWidth*.12);
+    ctx.beginPath();
+    ctx.moveTo(px(scene,-.009),py(scene,-.02));
+    ctx.bezierCurveTo(px(scene,-.022),py(scene,-.18),px(scene,-.002),py(scene,-.34),px(scene,-.018),py(scene,-.49));
+    ctx.stroke();
+
+    BRANCHES.forEach(branch=>{
+      const flex=(Math.abs(branch.to[0])+.25)*wind;
+      ctx.strokeStyle=branch.tone||'#58454b';
+      ctx.lineWidth=Math.max(1.7,branch.width*scene.treeW/720);
       ctx.beginPath();
-      ctx.moveTo(cx+c[0]*r+drift,cy+c[1]*r);
-      ctx.bezierCurveTo(cx+c[2]*r,cy+c[3]*r,cx+c[4]*r,cy+c[5]*r,cx+c[6]*r-drift,cy+c[7]*r);
+      ctx.moveTo(px(scene,branch.from[0]),py(scene,branch.from[1]));
+      ctx.quadraticCurveTo(px(scene,branch.control[0]+flex*.45),py(scene,branch.control[1]),px(scene,branch.to[0]+flex),py(scene,branch.to[1]));
       ctx.stroke();
     });
     ctx.restore();
   }
 
-  function drawLand(cx,cy,r,rotation){
-    for(const dot of landDots){
-      const p=projectSphere(dot.lat,dot.lon+rotation,cx,cy,r*.965);
-      if(p.z<=.035)continue;
-      const edge=Math.min(1,(p.z-.035)/.20);
-      const rr=(1.6+dot.size*.75)*(.56+.44*p.z);
-      ctx.save();
-      ctx.globalAlpha=(.34+.42*p.z)*edge;
-      ctx.fillStyle='#eef5df';
-      ctx.beginPath();
-      ctx.arc(p.x,p.y,rr,0,Math.PI*2);
-      ctx.fill();
-      ctx.restore();
-    }
-  }
+  function drawBlossoms(scene,t){
+    const baseRadius=Math.max(4.6,Math.min(8.2,scene.treeW/108));
+    const wind=reduced?0:Math.sin(t*.68)*scene.treeW*.0032;
 
-  function drawContributionLights(cx,cy,r,rotation,t){
-    for(let i=0;i<activityPoints.length;i++){
-      const level=levels[i]||0;
-      if(level<=0)continue;
-      const point=activityPoints[i];
-      const p=projectSphere(point.lat,point.lon+rotation,cx,cy,r*.93);
-      if(p.z<=.10)continue;
+    blossomPoints.forEach((point,index)=>{
+      const level=levels[index]||0;
+      const wave=clamp(reveal*1.42-index/blossomPoints.length*.42,0,1);
+      const flex=.28+(-point.y)*.95;
+      let x=px(scene,point.x)+wind*flex+Math.sin(t*.95+point.seed)*(.45+flex*.55);
+      let y=py(scene,point.y)+Math.cos(t*.82+point.seed*.77)*(.35+flex*.45);
+      let hover=0;
 
-      const revealGate=(i+1)/activityPoints.length;
-      if(reveal<revealGate*.72)continue;
-
-      const color=palette[level];
-      const twinkle=reduced?1:.90+Math.sin(t*1.45+i*.73)*.10;
-      const radius=(1.55+level*.48)*(.50+.50*p.z)*twinkle;
-      ctx.save();
-      ctx.globalAlpha=(.48+.34*p.z)*Math.min(1,(p.z-.10)/.22);
-      ctx.shadowColor=hexAlpha(color,.38);
-      ctx.shadowBlur=6+level*1.8;
-      ctx.fillStyle=color;
-      ctx.beginPath();
-      ctx.arc(p.x,p.y,radius,0,Math.PI*2);
-      ctx.fill();
-      if(level>=4){
-        ctx.globalAlpha=.70;
-        ctx.fillStyle='rgba(255,255,255,.82)';
-        ctx.beginPath();
-        ctx.arc(p.x-radius*.28,p.y-radius*.3,Math.max(.6,radius*.18),0,Math.PI*2);
-        ctx.fill();
+      if(pointer.active){
+        const dx=x-pointer.x,dy=y-pointer.y;
+        const dist=Math.hypot(dx,dy);
+        if(dist<64&&dist>0){
+          hover=(64-dist)/64;
+          x+=dx/dist*hover*3.8;
+          y+=dy/dist*hover*3.8;
+        }
       }
+
+      if(level===0||wave<.06){
+        drawBud(x,y,baseRadius*(.32+hover*.12),point.seed);
+        return;
+      }
+
+      const size=baseRadius*(.68+level*.095)*(easeOutBack(wave)+hover*.18+pulse*.05);
+      drawSakura(x,y,size,palette[level],point.seed,t,level);
+    });
+  }
+
+  function drawSakura(x,y,r,color,seed,t,level){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.rotate(seed*.17+(reduced?0:Math.sin(t*.47+seed)*.045));
+    ctx.shadowColor=hexAlpha(color,.18+level*.018);
+    ctx.shadowBlur=6+level*1.1;
+    ctx.fillStyle=color;
+
+    for(let petal=0;petal<5;petal++){
+      ctx.save();
+      ctx.rotate(Math.PI*2*petal/5);
+      ctx.beginPath();
+      ctx.moveTo(0,-r*.04);
+      ctx.bezierCurveTo(r*.12,-r*.52,r*.47,-r*.58,r*.61,-r*.24);
+      ctx.bezierCurveTo(r*.73,r*.05,r*.40,r*.38,0,r*.19);
+      ctx.bezierCurveTo(-r*.40,r*.38,-r*.73,r*.05,-r*.61,-r*.24);
+      ctx.bezierCurveTo(-r*.47,-r*.58,-r*.12,-r*.52,0,-r*.04);
+      ctx.fill();
       ctx.restore();
     }
-  }
 
-  function drawSphereLight(cx,cy,r){
-    const highlight=ctx.createRadialGradient(cx-r*.42,cy-r*.48,0,cx-r*.28,cy-r*.36,r*.94);
-    highlight.addColorStop(0,'rgba(255,255,255,.25)');
-    highlight.addColorStop(.25,'rgba(255,255,255,.09)');
-    highlight.addColorStop(1,'rgba(255,255,255,0)');
-    ctx.fillStyle=highlight;
-    ctx.fillRect(cx-r,cy-r,r*2,r*2);
-
-    const shade=ctx.createLinearGradient(cx-r*.1,cy-r*.15,cx+r,cy+r*.1);
-    shade.addColorStop(0,'rgba(13,62,121,0)');
-    shade.addColorStop(.72,'rgba(13,62,121,.025)');
-    shade.addColorStop(1,'rgba(13,62,121,.13)');
-    ctx.fillStyle=shade;
-    ctx.fillRect(cx-r,cy-r,r*2,r*2);
-  }
-
-  function drawOrbitBack(scene,t){
-    ctx.save();
-    ctx.translate(scene.cx,scene.cy);
-    ctx.rotate(-.14);
-    ctx.strokeStyle='rgba(255,214,90,.075)';
-    ctx.lineWidth=1.05;
+    ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(255,244,195,.88)';
     ctx.beginPath();
-    ctx.ellipse(0,0,scene.r*1.48,scene.r*.34,0,Math.PI,Math.PI*2);
+    ctx.arc(0,0,Math.max(1.2,r*.14),0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawBud(x,y,r,seed){
+    ctx.save();
+    ctx.translate(x,y);
+    ctx.rotate(seed*.31);
+    ctx.fillStyle='#eee5e8';
+    ctx.strokeStyle='rgba(88,69,75,.24)';
+    ctx.lineWidth=.8;
+    ctx.beginPath();
+    ctx.moveTo(0,-r);
+    ctx.quadraticCurveTo(r*.9,-r*.15,0,r*.88);
+    ctx.quadraticCurveTo(-r*.9,-r*.15,0,-r);
+    ctx.fill();
     ctx.stroke();
     ctx.restore();
   }
 
-  function drawOrbitFront(scene,t){
-    const angle=reduced?.45:t*.42;
-    ctx.save();
-    ctx.translate(scene.cx,scene.cy);
-    ctx.rotate(-.14);
-    ctx.strokeStyle='rgba(255,214,90,.12)';
-    ctx.lineWidth=1.05;
-    ctx.beginPath();
-    ctx.ellipse(0,0,scene.r*1.48,scene.r*.34,0,0,Math.PI);
-    ctx.stroke();
-
-    const ox=Math.cos(angle)*scene.r*1.48;
-    const oy=Math.sin(angle)*scene.r*.34;
-    if(Math.sin(angle)>=0){
-      ctx.fillStyle='#ffd65a';
-      ctx.shadowColor='rgba(255,214,90,.38)';
-      ctx.shadowBlur=9;
+  function drawFallingPetals(scene,t){
+    const strength=.12+Math.min(1,activeDays/180)*.20;
+    fallingPetals.forEach((petal,index)=>{
+      const cycle=cssHeight+130;
+      const y=((petal.y+t*petal.fall)%cycle)-65;
+      const x=((petal.x+t*petal.drift+Math.sin(t*petal.wave+petal.phase)*17)%(cssWidth+120))-60;
+      const rr=2.6+petal.size*1.8;
+      ctx.save();
+      ctx.translate(x,y);
+      ctx.rotate(petal.rotation+(reduced?0:t*petal.spin));
+      ctx.globalAlpha=strength*(.72+.28*Math.sin(t*.7+index));
+      ctx.fillStyle=index%3===0?'#e873a2':'#f4bfd1';
       ctx.beginPath();
-      ctx.arc(ox,oy,3.4,0,Math.PI*2);
+      ctx.moveTo(0,-rr);
+      ctx.bezierCurveTo(rr*.95,-rr*.72,rr*.85,rr*.45,0,rr);
+      ctx.bezierCurveTo(-rr*.82,rr*.35,-rr*.88,-rr*.58,0,-rr);
       ctx.fill();
-    }
-    ctx.restore();
+      ctx.restore();
+    });
   }
 
   if(reduced)draw(performance.now());
   else requestAnimationFrame(draw);
 });
 
-const LAND_POLYGONS=[
-  [[-168,72],[-145,70],[-132,60],[-124,52],[-118,43],[-105,31],[-96,20],[-83,10],[-78,23],[-88,32],[-101,38],[-112,50],[-128,58],[-150,61]],
-  [[-81,13],[-68,9],[-55,2],[-48,-10],[-43,-23],[-54,-39],[-68,-55],[-77,-37],[-79,-18]],
-  [[-10,70],[18,72],[45,68],[72,61],[102,67],[135,58],[160,47],[148,34],[122,23],[105,8],[80,8],[66,22],[48,29],[31,42],[12,45],[-4,55]],
-  [[-17,35],[4,37],[24,32],[41,16],[43,2],[34,-20],[20,-35],[5,-31],[-8,-12],[-15,8]],
-  [[112,-11],[130,-10],[151,-22],[153,-34],[135,-44],[116,-35]],
-  [[-52,83],[-30,78],[-20,68],[-42,60],[-58,67]],
-  [[129,31],[143,44],[146,35],[137,30]],
-  [[47,-13],[51,-16],[50,-25],[45,-23]]
+const BRANCHES=[
+  {from:[-.006,-.23],control:[-.15,-.32],to:[-.31,-.43],width:9},
+  {from:[-.004,-.29],control:[.15,-.36],to:[.34,-.45],width:9},
+  {from:[-.012,-.39],control:[-.12,-.49],to:[-.26,-.60],width:7.5},
+  {from:[-.008,-.42],control:[.11,-.51],to:[.27,-.62],width:7.5},
+  {from:[-.014,-.49],control:[-.045,-.62],to:[-.025,-.74],width:6.3},
+  {from:[-.18,-.35],control:[-.30,-.38],to:[-.42,-.40],width:4.4,tone:'rgba(88,69,75,.90)'},
+  {from:[-.22,-.47],control:[-.32,-.54],to:[-.40,-.58],width:4.1,tone:'rgba(88,69,75,.90)'},
+  {from:[-.15,-.52],control:[-.20,-.64],to:[-.28,-.69],width:3.6,tone:'rgba(88,69,75,.88)'},
+  {from:[-.08,-.57],control:[-.10,-.68],to:[-.11,-.76],width:3.4,tone:'rgba(88,69,75,.86)'},
+  {from:[.18,-.37],control:[.30,-.39],to:[.43,-.42],width:4.4,tone:'rgba(88,69,75,.90)'},
+  {from:[.22,-.49],control:[.33,-.54],to:[.41,-.59],width:4.1,tone:'rgba(88,69,75,.90)'},
+  {from:[.15,-.54],control:[.20,-.66],to:[.28,-.70],width:3.7,tone:'rgba(88,69,75,.88)'},
+  {from:[.07,-.58],control:[.08,-.70],to:[.13,-.77],width:3.3,tone:'rgba(88,69,75,.86)'},
+  {from:[-.25,-.42],control:[-.29,-.48],to:[-.33,-.52],width:2.8,tone:'rgba(88,69,75,.82)'},
+  {from:[.28,-.44],control:[.31,-.50],to:[.35,-.53],width:2.8,tone:'rgba(88,69,75,.82)'},
+  {from:[-.035,-.65],control:[.02,-.71],to:[.05,-.79],width:2.7,tone:'rgba(88,69,75,.82)'}
 ];
+
+const BLOSSOM_PATHS=[
+  {from:[-.08,-.47],control:[-.22,-.54],to:[-.39,-.59],spread:.045,count:40},
+  {from:[-.15,-.43],control:[-.29,-.45],to:[-.43,-.46],spread:.042,count:34},
+  {from:[-.10,-.55],control:[-.18,-.65],to:[-.29,-.70],spread:.041,count:34},
+  {from:[-.04,-.57],control:[-.08,-.68],to:[-.04,-.78],spread:.038,count:36},
+  {from:[.04,-.56],control:[.10,-.67],to:[.18,-.75],spread:.039,count:36},
+  {from:[.09,-.49],control:[.24,-.56],to:[.40,-.60],spread:.045,count:40},
+  {from:[.16,-.42],control:[.30,-.45],to:[.44,-.46],spread:.042,count:34},
+  {from:[-.06,-.39],control:[-.20,-.39],to:[-.34,-.37],spread:.040,count:29},
+  {from:[.05,-.37],control:[.19,-.37],to:[.34,-.34],spread:.040,count:28},
+  {from:[-.03,-.31],control:[-.14,-.31],to:[-.25,-.29],spread:.034,count:20},
+  {from:[.03,-.30],control:[.13,-.31],to:[.25,-.28],spread:.034,count:20},
+  {from:[-.01,-.62],control:[.00,-.72],to:[.03,-.81],spread:.030,count:14}
+];
+
+function buildBlossomPoints(){
+  const points=[];
+  let serial=1;
+  BLOSSOM_PATHS.forEach(path=>{
+    for(let i=0;i<path.count;i++){
+      const base=(i+.45)/path.count;
+      const u=clamp(base+(seeded(serial*7)-.5)/path.count*.72,.01,.99);
+      const q=quadraticPoint(path.from,path.control,path.to,u);
+      const tangent=quadraticTangent(path.from,path.control,path.to,u);
+      const len=Math.hypot(tangent[0],tangent[1])||1;
+      const normal=[-tangent[1]/len,tangent[0]/len];
+      const spread=(seeded(serial*13)-.5)*2*path.spread*(.58+u*.65);
+      const along=(seeded(serial*19)-.5)*path.spread*.45;
+      points.push({
+        x:q[0]+normal[0]*spread+tangent[0]/len*along,
+        y:q[1]+normal[1]*spread+tangent[1]/len*along,
+        seed:seeded(serial*29)*20+serial*.07
+      });
+      serial++;
+    }
+  });
+
+  for(let i=points.length-1;i>0;i--){
+    const j=Math.floor(seeded(i*97+11)*(i+1));
+    [points[i],points[j]]=[points[j],points[i]];
+  }
+  return points.slice(0,365);
+}
+
+function buildFallingPetals(count){
+  const petals=[];
+  for(let i=0;i<count;i++){
+    petals.push({
+      x:seeded(i*31+3)*1400,
+      y:seeded(i*47+5)*760,
+      fall:12+seeded(i*59+7)*15,
+      drift:5+seeded(i*71+9)*10,
+      wave:.52+seeded(i*83+13)*.55,
+      phase:seeded(i*89+17)*Math.PI*2,
+      rotation:seeded(i*101+19)*Math.PI*2,
+      spin:.18+seeded(i*107+23)*.40,
+      size:seeded(i*113+29)
+    });
+  }
+  return petals;
+}
 
 async function loadContributionData(dayCount){
   const sources=[
@@ -343,29 +349,21 @@ async function loadContributionData(dayCount){
       if(!response.ok)continue;
       const data=await response.json();
       if(!isValidContributionData(data))continue;
-      const levels=buildCalendarLevels(dayCount,data);
-      return {
-        levels,
-        source:source.name,
-        totalContributions:Number(data.totalContributions)||0,
-        activeDays:levels.filter(level=>level>0).length
-      };
+      const result=buildCalendarLevels(dayCount,data);
+      return {levels:result.levels,source:source.name,totalContributions:Number(data.totalContributions)||result.total,activeDays:result.activeDays};
     }catch(error){
       console.debug(`[Fugu Activity] ${source.name} failed`,error);
     }
   }
 
   const fallback=await loadEventFallback(dayCount);
-  return {
-    levels:fallback.levels,
-    source:'public-events-fallback',
-    totalContributions:fallback.total,
-    activeDays:fallback.levels.filter(level=>level>0).length
-  };
+  return {levels:fallback.levels,source:'public-events-fallback',totalContributions:fallback.totalContributions,activeDays:fallback.levels.filter(level=>level>0).length};
 }
 
 function isValidContributionData(data){
-  return !!data&&Array.isArray(data.days)&&data.days.length>=300&&data.days.some(day=>(Number(day.count)||0)>0);
+  if(!data||!Array.isArray(data.days)||data.days.length<300)return false;
+  const validDays=data.days.filter(day=>/^\d{4}-\d{2}-\d{2}$/.test(String(day?.date||'')));
+  return validDays.length>=300&&validDays.some(day=>(Number(day.count)||0)>0);
 }
 
 function buildCalendarLevels(dayCount,data){
@@ -374,12 +372,17 @@ function buildCalendarLevels(dayCount,data){
   const hotThreshold=positive.length?positive[Math.floor((positive.length-1)*.90)]:Infinity;
   const end=parseDateOnly(data.to)||utcToday();
   const levels=[];
+  let total=0,activeDays=0;
+
   for(let i=0;i<dayCount;i++){
-    const d=new Date(end);
-    d.setUTCDate(end.getUTCDate()-(dayCount-1-i));
-    levels.push(calendarLevel(byDate.get(dateKey(d)),hotThreshold));
+    const date=new Date(end);
+    date.setUTCDate(end.getUTCDate()-(dayCount-1-i));
+    const day=byDate.get(dateKey(date));
+    const count=Number(day?.count)||0;
+    if(count>0){total+=count;activeDays++}
+    levels.push(calendarLevel(day,hotThreshold));
   }
-  return levels;
+  return {levels,total,activeDays};
 }
 
 function calendarLevel(day,hotThreshold){
@@ -398,29 +401,30 @@ function calendarLevel(day,hotThreshold){
 
 async function loadEventFallback(dayCount){
   const counts=new Map();
-  let total=0;
   for(let page=1;page<=3;page++){
     const response=await fetch(`https://api.github.com/users/Fugu0141/events/public?per_page=100&page=${page}`,{headers:{Accept:'application/vnd.github+json'}});
     if(!response.ok)break;
     const events=await response.json();
+    if(!Array.isArray(events)||events.length===0)break;
     for(const event of events){
       const key=String(event.created_at||'').slice(0,10);
       if(!key)continue;
-      const weight=eventWeight(event);
-      counts.set(key,(counts.get(key)||0)+weight);
-      total+=weight;
+      counts.set(key,(counts.get(key)||0)+eventWeight(event));
     }
     if(events.length<100)break;
   }
+
   const now=utcToday();
   const levels=[];
+  let totalContributions=0;
   for(let i=0;i<dayCount;i++){
-    const d=new Date(now);
-    d.setUTCDate(now.getUTCDate()-(dayCount-1-i));
-    const n=counts.get(dateKey(d))||0;
+    const date=new Date(now);
+    date.setUTCDate(now.getUTCDate()-(dayCount-1-i));
+    const n=counts.get(dateKey(date))||0;
+    totalContributions+=n;
     levels.push(n===0?0:n===1?1:n<=3?2:n<=6?3:n<=10?4:5);
   }
-  return {levels,total};
+  return {levels,totalContributions};
 }
 
 function eventWeight(event){
@@ -432,98 +436,17 @@ function eventWeight(event){
   return 1;
 }
 
-function activityToOceanDepth(total,active){
-  const totalFactor=Math.min(1,Math.log1p(Math.max(0,total))/Math.log(1501));
-  const activeFactor=Math.min(1,Math.max(0,active)/220);
-  return clamp(.27+totalFactor*.46+activeFactor*.17,.27,.90);
-}
-
-function buildActivitySphere(count){
-  const points=[];
-  const golden=Math.PI*(3-Math.sqrt(5));
-  for(let i=0;i<count;i++){
-    const y=1-(i/(Math.max(1,count-1)))*2;
-    const lat=Math.asin(clamp(y,-1,1));
-    const lon=wrapAngle(i*golden-Math.PI);
-    points.push({lat,lon});
-  }
-  return points;
-}
-
-function buildLandDots(){
-  const dots=[];
-  for(let lat=-58;lat<=78;lat+=5){
-    for(let lon=-175;lon<=175;lon+=5){
-      if(!LAND_POLYGONS.some(poly=>pointInPolygon(lon,lat,poly)))continue;
-      const jitterLon=(hash01(lon*13+lat*7)-.5)*2.2;
-      const jitterLat=(hash01(lon*5-lat*11+17)-.5)*1.8;
-      dots.push({
-        lon:toRad(lon+jitterLon),
-        lat:toRad(lat+jitterLat),
-        size:.35+hash01(lon*19+lat*23)*.85
-      });
-    }
-  }
-  return dots;
-}
-
-function pointInPolygon(lon,lat,poly){
-  let inside=false;
-  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
-    const xi=poly[i][0],yi=poly[i][1];
-    const xj=poly[j][0],yj=poly[j][1];
-    const intersect=((yi>lat)!==(yj>lat))&&(lon<(xj-xi)*(lat-yi)/((yj-yi)||1e-9)+xi);
-    if(intersect)inside=!inside;
-  }
-  return inside;
-}
-
-function projectSphere(lat,lon,cx,cy,r){
-  const tilt=toRad(-9);
-  const cosLat=Math.cos(lat),sinLat=Math.sin(lat);
-  const sinLon=Math.sin(lon),cosLon=Math.cos(lon);
-  const x=cosLat*sinLon;
-  const y=sinLat*Math.cos(tilt)-cosLat*cosLon*Math.sin(tilt);
-  const z=sinLat*Math.sin(tilt)+cosLat*cosLon*Math.cos(tilt);
-  return {x:cx+x*r,y:cy-y*r,z};
-}
-
 function layout(w,h){
-  const r=Math.min(w,h)*.305;
-  return {cx:w*.5,cy:h*.49,r};
+  return {cx:w*.5,baseY:h*.875,treeW:Math.min(w*.91,h*1.22),treeH:h*.80};
 }
-
-function parseDateOnly(value){
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||'')))return null;
-  const [y,m,d]=value.split('-').map(Number);
-  return new Date(Date.UTC(y,m-1,d));
-}
-
-function utcToday(){
-  const now=new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()));
-}
-
-function dateKey(date){return date.toISOString().slice(0,10)}
-function toRad(value){return value*Math.PI/180}
+function px(scene,x){return scene.cx+x*scene.treeW}
+function py(scene,y){return scene.baseY+y*scene.treeH}
+function quadraticPoint(a,c,b,t){const m=1-t;return [m*m*a[0]+2*m*t*c[0]+t*t*b[0],m*m*a[1]+2*m*t*c[1]+t*t*b[1]]}
+function quadraticTangent(a,c,b,t){return [2*(1-t)*(c[0]-a[0])+2*t*(b[0]-c[0]),2*(1-t)*(c[1]-a[1])+2*t*(b[1]-c[1])]}
+function seeded(n){const x=Math.sin(n*12.9898+78.233)*43758.5453;return x-Math.floor(x)}
 function clamp(value,min,max){return Math.max(min,Math.min(max,value))}
-function wrapAngle(value){
-  const two=Math.PI*2;
-  return ((value+Math.PI)%two+two)%two-Math.PI;
-}
-function hash01(value){
-  const x=Math.sin(value*12.9898+78.233)*43758.5453;
-  return x-Math.floor(x);
-}
-function mixColor(a,b,t){
-  const c1=hexToRgb(a),c2=hexToRgb(b),p=clamp(t,0,1);
-  return `rgb(${Math.round(c1.r+(c2.r-c1.r)*p)},${Math.round(c1.g+(c2.g-c1.g)*p)},${Math.round(c1.b+(c2.b-c1.b)*p)})`;
-}
-function hexToRgb(hex){
-  const n=parseInt(hex.replace('#',''),16);
-  return {r:(n>>16)&255,g:(n>>8)&255,b:n&255};
-}
-function hexAlpha(hex,a){
-  const c=hexToRgb(hex);
-  return `rgba(${c.r},${c.g},${c.b},${a})`;
-}
+function easeOutBack(x){const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2)}
+function utcToday(){const now=new Date();return new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()))}
+function parseDateOnly(value){if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||'')))return null;const [y,m,d]=value.split('-').map(Number);return new Date(Date.UTC(y,m-1,d))}
+function dateKey(date){return date.toISOString().slice(0,10)}
+function hexAlpha(hex,a){const n=parseInt(hex.replace('#',''),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`}
