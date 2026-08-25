@@ -33,10 +33,13 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(reduced)draw(performance.now());
   });
 
-  loadContributionLevels(DAY_COUNT).then(levels=>{
-    dailyLevels=levels;
+  loadContributionLevels(DAY_COUNT).then(result=>{
+    dailyLevels=result.levels;
+    console.info(`[Fugu Activity] source=${result.source}, activeDays=${result.activeDays}/${DAY_COUNT}`);
     if(reduced)draw(performance.now());
-  }).catch(()=>{});
+  }).catch(error=>{
+    console.warn('[Fugu Activity] contribution data could not be loaded',error);
+  });
 
   function resize(){
     const rect=canvas.getBoundingClientRect();
@@ -71,9 +74,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       const y=art.y+art.h*ny+(reduced?0:Math.cos(t*.42+phase)*7);
       ctx.strokeStyle='rgba(105,215,221,.20)';
       ctx.lineWidth=1.2;
-      ctx.beginPath();
-      ctx.arc(x,y,r,0,Math.PI*2);
-      ctx.stroke();
+      ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
     });
     ctx.restore();
   }
@@ -117,36 +118,22 @@ document.addEventListener('DOMContentLoaded',()=>{
       ctx.shadowColor=level>0?hexAlpha(palette[level],level>=4?.32:.20):'transparent';
       ctx.shadowBlur=level>0?6+level*1.7:0;
       ctx.fillStyle=palette[level];
-      ctx.beginPath();
-      ctx.arc(x,y,r,0,Math.PI*2);
-      ctx.fill();
+      ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
 
       if(level>=3){
         ctx.fillStyle='rgba(255,255,255,.66)';
-        ctx.beginPath();
-        ctx.arc(x-r*.28,y-r*.32,Math.max(.8,r*.13),0,Math.PI*2);
-        ctx.fill();
+        ctx.beginPath();ctx.arc(x-r*.28,y-r*.32,Math.max(.8,r*.13),0,Math.PI*2);ctx.fill();
       }
       ctx.restore();
     });
 
     const eyeX=art.x+art.w*.80,eyeY=art.y+art.h*.42+bodyBob;
-    ctx.fillStyle='#17191f';
-    ctx.beginPath();
-    ctx.arc(eyeX,eyeY,baseRadius*1.35,0,Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle='#fff';
-    ctx.beginPath();
-    ctx.arc(eyeX-baseRadius*.38,eyeY-baseRadius*.42,baseRadius*.36,0,Math.PI*2);
-    ctx.fill();
+    ctx.fillStyle='#17191f';ctx.beginPath();ctx.arc(eyeX,eyeY,baseRadius*1.35,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(eyeX-baseRadius*.38,eyeY-baseRadius*.42,baseRadius*.36,0,Math.PI*2);ctx.fill();
 
     const mouthX=art.x+art.w*.923,mouthY=art.y+art.h*.54+bodyBob;
-    ctx.strokeStyle='rgba(23,25,31,.58)';
-    ctx.lineWidth=Math.max(1.3,baseRadius*.20);
-    ctx.lineCap='round';
-    ctx.beginPath();
-    ctx.arc(mouthX,mouthY,baseRadius*1.05,-.76,.76);
-    ctx.stroke();
+    ctx.strokeStyle='rgba(23,25,31,.58)';ctx.lineWidth=Math.max(1.3,baseRadius*.20);ctx.lineCap='round';
+    ctx.beginPath();ctx.arc(mouthX,mouthY,baseRadius*1.05,-.76,.76);ctx.stroke();
   }
 
   if(reduced)draw(performance.now());
@@ -154,17 +141,41 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 async function loadContributionLevels(dayCount){
-  try{
-    const response=await fetch('assets/contributions.json',{cache:'no-store'});
-    if(response.ok){
-      const data=await response.json();
-      if(Array.isArray(data.days)&&data.days.length>30){
-        return buildCalendarLevels(dayCount,data);
-      }
-    }
-  }catch{}
+  const sources=[
+    {name:'local-json',url:'assets/contributions.json'},
+    {name:'branch-raw-json',url:'https://raw.githubusercontent.com/Fugu0141/Fugu0141.github.io/redesign-game-portfolio/assets/contributions.json'}
+  ];
 
-  return loadEventFallback(dayCount);
+  for(const source of sources){
+    try{
+      const response=await fetch(source.url,{cache:'no-store'});
+      if(!response.ok)continue;
+      const data=await response.json();
+      if(!isValidContributionData(data))continue;
+      const levels=buildCalendarLevels(dayCount,data);
+      return {
+        levels,
+        source:source.name,
+        activeDays:levels.filter(level=>level>0).length
+      };
+    }catch(error){
+      console.debug(`[Fugu Activity] ${source.name} failed`,error);
+    }
+  }
+
+  const levels=await loadEventFallback(dayCount);
+  return {
+    levels,
+    source:'public-events-fallback',
+    activeDays:levels.filter(level=>level>0).length
+  };
+}
+
+function isValidContributionData(data){
+  if(!data||!Array.isArray(data.days)||data.days.length<300)return false;
+  const validDays=data.days.filter(day=>/^\d{4}-\d{2}-\d{2}$/.test(String(day?.date||'')));
+  if(validDays.length<300)return false;
+  return validDays.some(day=>(Number(day.count)||0)>0);
 }
 
 function buildCalendarLevels(dayCount,data){
@@ -193,7 +204,6 @@ function calendarLevel(day,hotThreshold){
   if(day.level==='SECOND_QUARTILE')return 2;
   if(day.level==='THIRD_QUARTILE')return 3;
   if(day.level==='FOURTH_QUARTILE')return count>=hotThreshold?5:4;
-
   if(count===1)return 1;
   if(count<=3)return 2;
   if(count<=6)return 3;
@@ -202,15 +212,17 @@ function calendarLevel(day,hotThreshold){
 }
 
 async function loadEventFallback(dayCount){
-  const response=await fetch('https://api.github.com/users/Fugu0141/events/public?per_page=100',{headers:{Accept:'application/vnd.github+json'}});
-  if(!response.ok)throw new Error('GitHub API');
-  const events=await response.json();
   const counts=new Map();
-
-  for(const event of events){
-    const key=String(event.created_at||'').slice(0,10);
-    if(!key)continue;
-    counts.set(key,(counts.get(key)||0)+eventWeight(event));
+  for(let page=1;page<=3;page++){
+    const response=await fetch(`https://api.github.com/users/Fugu0141/events/public?per_page=100&page=${page}`,{headers:{Accept:'application/vnd.github+json'}});
+    if(!response.ok)throw new Error('GitHub API');
+    const events=await response.json();
+    for(const event of events){
+      const key=String(event.created_at||'').slice(0,10);
+      if(!key)continue;
+      counts.set(key,(counts.get(key)||0)+eventWeight(event));
+    }
+    if(events.length<100)break;
   }
 
   const now=utcToday();
@@ -235,7 +247,6 @@ function eventWeight(event){
 
 function buildFishPoints(targetCount){
   const cols=49,rows=29,candidates=[];
-
   for(let y=0;y<rows;y++){
     for(let x=0;x<cols;x++){
       const body=Math.pow((x-32)/16.2,2)+Math.pow((y-14)/10.3,2)<=1;
@@ -248,7 +259,6 @@ function buildFishPoints(targetCount){
   }
 
   candidates.sort((a,b)=>a.x-b.x||(a.x%2===0?a.y-b.y:b.y-a.y));
-
   const picked=[];
   if(candidates.length<=targetCount){
     picked.push(...candidates);
