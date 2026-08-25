@@ -94,7 +94,7 @@ jobs:
       - name: Commit updated data
         shell: bash
         run: |
-          if git diff --quiet -- assets/contributions.json; then
+          if [ -z "$(git status --porcelain -- assets/contributions.json)" ]; then
             echo "Contribution data is already up to date."
             exit 0
           fi
