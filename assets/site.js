@@ -98,7 +98,15 @@ function actionJa(action){
   return ({opened:'作成',closed:'終了',reopened:'再開',synchronize:'更新',created:'作成',edited:'編集',deleted:'削除'})[action]||'更新';
 }
 
-function escapeHtml(value){return String(value).replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]))}
+function escapeHtml(value){
+  return String(value).replace(/[&<>'"]/g,c=>({
+    '&':'&amp;',
+    '<':'&lt;',
+    '>':'&gt;',
+    "'":'&#39;',
+    '"':'&quot;'
+  })[c]);
+}
 
 if(window.p5&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
   new p5(p=>{
