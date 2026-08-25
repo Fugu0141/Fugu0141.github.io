@@ -1,13 +1,12 @@
 const NAV_ITEMS=[
-  ['projects','projects.html','制作','Projects'],
+  ['projects','projects.html','つくったもの','Projects'],
   ['activity','activity.html','活動','Activity'],
-  ['principles','principles.html','理念','Principles'],
+  ['principles','principles.html','考えていること','Principles'],
   ['links','links.html','リンク','Links']
 ];
 
 document.addEventListener('DOMContentLoaded',()=>{
   renderChrome();
-
   const saved=localStorage.getItem('fugu-language');
   setLanguage(saved==='en'?'en':'ja');
 
@@ -17,7 +16,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
   const observer=new IntersectionObserver(entries=>{
     entries.forEach(entry=>{if(entry.isIntersecting)entry.target.classList.add('visible')});
-  },{threshold:.06});
+  },{threshold:.08});
   document.querySelectorAll('.reveal').forEach(el=>observer.observe(el));
 
   loadGitHubActivity();
@@ -29,9 +28,9 @@ function renderChrome(){
   if(header){
     header.className='site-header';
     header.innerHTML=`<div class="shell header-inner">
-      <a class="brand" href="index.html" aria-label="Fugu profile"><span class="brand-dot"></span>Fugu</a>
+      <a class="brand" href="index.html" aria-label="Fugu profile"><span class="brand-bubble"></span>Fugu</a>
       <nav class="nav-links" aria-label="Main navigation">
-        ${NAV_ITEMS.map(([id,href,ja,en])=>`<a href="${href}"${id===current?' aria-current="page"':''}><span class="lang-ja">${ja}</span><span class="lang-en">${en}</span></a>`).join('')}
+        ${NAV_ITEMS.map(([id,href,ja,en])=>`<a href="${href}" data-nav="${id}"${id===current?' aria-current="page"':''}><span class="lang-ja">${ja}</span><span class="lang-en">${en}</span></a>`).join('')}
       </nav>
       <div class="lang-switch" aria-label="Language"><button type="button" data-lang-button="ja">日本語</button><button type="button" data-lang-button="en">EN</button></div>
     </div>`;
@@ -40,7 +39,7 @@ function renderChrome(){
   const footer=document.querySelector('[data-site-footer]');
   if(footer){
     footer.className='footer';
-    footer.innerHTML=`<div class="shell footer-inner"><span>© 2026 Fugu</span><span><span class="lang-ja">つくる・学ぶ・共有する</span><span class="lang-en">Create · Learn · Share</span></span></div>`;
+    footer.innerHTML=`<div class="shell footer-inner"><span>© 2026 Fugu</span><span class="footer-mark"><span class="lang-ja">つくる・学ぶ・共有する</span><span class="lang-en">Create · Learn · Share</span></span></div>`;
   }
 }
 
@@ -60,7 +59,7 @@ function setLanguage(lang){
 function loadGitHubActivity(){
   const target=document.querySelector('[data-github-activity]');
   if(!target)return;
-  fetch('https://api.github.com/users/Fugu0141/events/public?per_page=8',{headers:{Accept:'application/vnd.github+json'}})
+  fetch('https://api.github.com/users/Fugu0141/events/public?per_page=10',{headers:{Accept:'application/vnd.github+json'}})
     .then(response=>{if(!response.ok)throw new Error('GitHub API');return response.json()})
     .then(events=>{window.__githubEvents=events;renderGitHubActivity(events)})
     .catch(()=>{
@@ -99,36 +98,71 @@ function actionJa(action){
 }
 
 function escapeHtml(value){
-  return String(value).replace(/[&<>'"]/g,c=>({
-    '&':'&amp;',
-    '<':'&lt;',
-    '>':'&gt;',
-    "'":'&#39;',
-    '"':'&quot;'
-  })[c]);
+  return String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'})[c]);
 }
 
 if(window.p5&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
   new p5(p=>{
-    let dots=[];
-    const reset=()=>{
-      dots=[];
-      const count=Math.max(12,Math.min(24,Math.floor((p.windowWidth*p.windowHeight)/65000)));
-      for(let i=0;i<count;i++)dots.push({x:p.random(p.width),y:p.random(p.height*.72),vx:p.random(-.05,.05),vy:p.random(-.05,.05)});
+    let bubbles=[];
+    let accent=[93,132,234];
+
+    function readAccent(){
+      const raw=getComputedStyle(document.body).getPropertyValue('--accent-rgb').trim().split(',').map(Number);
+      if(raw.length===3&&raw.every(Number.isFinite))accent=raw;
+    }
+
+    function reset(){
+      readAccent();
+      bubbles=[];
+      const count=Math.max(12,Math.min(26,Math.floor((p.windowWidth*p.windowHeight)/52000)));
+      for(let i=0;i<count;i++){
+        bubbles.push({
+          x:p.random(-40,p.width+40),y:p.random(-40,p.height+40),
+          r:p.random(8,44),vx:p.random(-.12,.12),vy:p.random(-.16,.04),
+          wobble:p.random(1000),alpha:p.random(22,58)
+        });
+      }
+    }
+
+    p.setup=()=>{
+      const canvas=p.createCanvas(p.windowWidth,p.windowHeight);
+      canvas.parent('p5-bg');
+      p.pixelDensity(1);
+      reset();
     };
-    p.setup=()=>{const canvas=p.createCanvas(p.windowWidth,p.windowHeight);canvas.parent('p5-bg');p.pixelDensity(1);reset()};
+
     p.draw=()=>{
       p.clear();
-      dots.forEach((a,i)=>{
-        a.x+=a.vx;a.y+=a.vy;
-        if(a.x<0||a.x>p.width)a.vx*=-1;if(a.y<0||a.y>p.height*.74)a.vy*=-1;
-        for(let j=i+1;j<dots.length;j++){
-          const b=dots[j],d=p.dist(a.x,a.y,b.x,b.y);
-          if(d<145){p.stroke(70,145,180,p.map(d,0,145,18,0));p.strokeWeight(.5);p.line(a.x,a.y,b.x,b.y)}
+      const activeMouse=p.mouseX>=0&&p.mouseY>=0&&p.mouseX<p.width&&p.mouseY<p.height;
+      bubbles.forEach((b,i)=>{
+        b.wobble+=.008;
+        b.x+=b.vx+Math.sin(b.wobble)*.035;
+        b.y+=b.vy+Math.cos(b.wobble*.7)*.02;
+
+        if(activeMouse){
+          const dx=b.x-p.mouseX,dy=b.y-p.mouseY;
+          const d=Math.sqrt(dx*dx+dy*dy);
+          if(d<130&&d>0){
+            const force=(130-d)/130*.42;
+            b.x+=dx/d*force;b.y+=dy/d*force;
+          }
         }
-        p.noStroke();p.fill(55,135,175,38);p.circle(a.x,a.y,2.6);
+
+        if(b.x<-80)b.x=p.width+80;if(b.x>p.width+80)b.x=-80;
+        if(b.y<-90)b.y=p.height+90;if(b.y>p.height+90)b.y=-90;
+
+        p.noFill();
+        p.stroke(accent[0],accent[1],accent[2],b.alpha);
+        p.strokeWeight(i%4===0?1.5:1);
+        p.circle(b.x,b.y,b.r*2);
+        if(i%3===0){
+          p.noStroke();
+          p.fill(accent[0],accent[1],accent[2],Math.min(24,b.alpha*.45));
+          p.circle(b.x-b.r*.28,b.y-b.r*.28,Math.max(3,b.r*.28));
+        }
       });
     };
+
     p.windowResized=()=>{p.resizeCanvas(p.windowWidth,p.windowHeight);reset()};
   });
 }
