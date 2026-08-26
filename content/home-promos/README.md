@@ -28,6 +28,6 @@ URLだけをファイル名にした `https%3A%2F%2Fexample.com.png` 形式に�
 
 `index.html` を直接ダブルクリックして `file://` で開く方法では、ブラウザの安全制限によりフォルダ内のPNG一覧を自動取得できません。
 
-Windowsではリポジトリ直下の `preview-local.ps1` を実行してください。ローカルサーバーが起動し、`http://localhost:8000/` で確認できます。この方法なら、このフォルダにPNGを追加したあとページを再読み込みするだけで表示されます。GitHubへのPushやmanifest更新は不要です。
+Windowsではリポジトリ直下の **`preview-local.bat` をダブルクリック**してください（PowerShellを使う場合は `preview-local.ps1` でも可）。ローカルサーバーが起動し、`http://localhost:8000/` で確認できます。この方法なら、このフォルダにPNGを追加したあとページを再読み込みするだけで表示されます。GitHubへのPushやmanifest更新は不要です。
 
 GitHub Pages上では、PNGを追加・削除すると GitHub Actions が `assets/content-manifest.json` を更新します。manifest更新前でも、ページ側はGitHub Contents APIから読み込むフォールバックを持っています。
