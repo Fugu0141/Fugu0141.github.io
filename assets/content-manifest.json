@@ -1,5 +1,21 @@
 {
-  "generatedAt": "2026-08-26T07:13:08.474Z",
-  "homePromos": [],
-  "projects": []
+  "generatedAt": "2026-08-26T09:09:32.328Z",
+  "homePromos": [
+    {
+      "order": 9999,
+      "title": "License Creator",
+      "url": "https://fugu0141.github.io/License_Creator",
+      "name": "https%3A%2F%2Ffugu0141.github.io%2FLicense_Creator.png",
+      "path": "content/home-promos/https%3A%2F%2Ffugu0141.github.io%2FLicense_Creator.png"
+    }
+  ],
+  "projects": [
+    {
+      "order": 9999,
+      "title": "License Creator",
+      "url": "https://fugu0141.github.io/License_Creator",
+      "name": "https%3A%2F%2Ffugu0141.github.io%2FLicense_Creator.png",
+      "path": "content/projects/https%3A%2F%2Ffugu0141.github.io%2FLicense_Creator.png"
+    }
+  ]
 }
