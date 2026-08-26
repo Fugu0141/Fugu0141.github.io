@@ -25,4 +25,10 @@
 
 URLだけをファイル名にした `https%3A%2F%2Fexample.com.png` 形式にも対応しています。URLをファイル名へ直接入れる場合、`:` や `/` はファイル名に使いにくいため、URL全体を `encodeURIComponent` してから使ってください。
 
-PNGを追加・削除すると GitHub Actions が `assets/content-manifest.json` を更新します。
+## ローカルで確認する方法
+
+`projects.html` を直接ダブルクリックして `file://` で開く方法では、ブラウザの安全制限によりフォルダ内のPNG一覧を自動取得できません。
+
+Windowsではリポジトリ直下の `preview-local.ps1` を実行してください。ローカルサーバーが起動し、`http://localhost:8000/projects.html` で確認できます。この方法なら、このフォルダにPNGを追加したあとページを再読み込みするだけで反映されます。GitHubへのPushやmanifest更新は不要です。
+
+GitHub Pages上では、PNGを追加・削除すると GitHub Actions が `assets/content-manifest.json` を更新します。
