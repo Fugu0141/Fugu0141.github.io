@@ -1,11 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const supportStyles = document.createElement('link');
-  supportStyles.rel = 'stylesheet';
-  supportStyles.href = 'assets/header-support.css';
-  supportStyles.dataset.headerSupportStyles = '';
-  if (!document.querySelector('link[data-header-support-styles]')) {
-    document.head.appendChild(supportStyles);
-  }
+  const ensureStylesheet = (href, marker) => {
+    if (document.querySelector(`link[${marker}]`)) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.setAttribute(marker, '');
+    document.head.appendChild(link);
+  };
+
+  ensureStylesheet('assets/header-support.css', 'data-header-support-styles');
+  ensureStylesheet('assets/mobile-refine.css', 'data-mobile-refine-styles');
 
   const brand = document.querySelector('.brand');
   if (brand) {
@@ -28,7 +32,9 @@ document.addEventListener('DOMContentLoaded', () => {
   ).join('');
 
   const headerInner = nav.closest('.header-inner');
-  if (headerInner && !headerInner.querySelector('.header-support')) {
+  if (!headerInner) return;
+
+  if (!headerInner.querySelector('.header-support')) {
     headerInner.insertAdjacentHTML('beforeend', `
       <div class="header-support" aria-label="サポート・メッセージ">
         <a class="header-support-link header-support-marshmallow"
@@ -42,5 +48,45 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="header-support-mark" aria-hidden="true">♡</span><span>Sponsors</span>
         </a>
       </div>`);
+  }
+
+  if (!headerInner.querySelector('.menu-toggle')) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'menu-toggle';
+    button.setAttribute('aria-label', 'メニューを開く');
+    button.setAttribute('aria-expanded', 'false');
+    button.innerHTML = '<span class="menu-toggle-lines" aria-hidden="true"></span>';
+    headerInner.appendChild(button);
+
+    const closeMenu = () => {
+      headerInner.classList.remove('is-menu-open');
+      button.setAttribute('aria-expanded', 'false');
+      button.setAttribute('aria-label', 'メニューを開く');
+    };
+
+    button.addEventListener('click', () => {
+      const open = !headerInner.classList.contains('is-menu-open');
+      headerInner.classList.toggle('is-menu-open', open);
+      button.setAttribute('aria-expanded', String(open));
+      button.setAttribute('aria-label', open ? 'メニューを閉じる' : 'メニューを開く');
+    });
+
+    nav.addEventListener('click', event => {
+      if (event.target.closest('a')) closeMenu();
+    });
+
+    const support = headerInner.querySelector('.header-support');
+    support?.addEventListener('click', event => {
+      if (event.target.closest('a')) closeMenu();
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') closeMenu();
+    });
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 760) closeMenu();
+    });
   }
 });
