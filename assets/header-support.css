@@ -1,0 +1,59 @@
+/* Compact support shortcuts placed beside the main navigation. */
+.header-support{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin-left:8px;
+  flex:0 0 auto;
+}
+
+.header-support-link{
+  min-height:36px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:0 11px;
+  border:1px solid #d9dbe0;
+  border-radius:12px;
+  background:#fff;
+  color:#3f434a;
+  text-decoration:none;
+  font-size:.75rem;
+  font-weight:800;
+  white-space:nowrap;
+  transition:transform .15s ease,border-color .15s ease,background .15s ease,box-shadow .15s ease;
+}
+
+.header-support-link:hover{
+  transform:translateY(-1px);
+  border-color:#bfc2c8;
+  box-shadow:0 6px 14px rgba(23,24,28,.07);
+}
+
+.header-support-mark{
+  font-size:.9rem;
+  line-height:1;
+}
+
+.header-support-marshmallow{
+  background:#fff7fb;
+  border-color:#ead9e4;
+}
+
+.header-support-sponsors{
+  background:#f7f5ff;
+  border-color:#ded8f0;
+}
+
+@media (max-width:1100px){
+  .portfolio-nav{gap:3px}
+  .portfolio-nav a{padding-left:9px;padding-right:9px}
+  .header-support{gap:5px;margin-left:3px}
+  .header-support-link{padding:0 9px;font-size:.71rem}
+}
+
+@media (max-width:760px){
+  /* The regular links page still exposes both destinations on narrow screens. */
+  .header-support{display:none}
+}
