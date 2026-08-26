@@ -176,7 +176,7 @@ function manifestItems(manifest, source) {
   if (!manifest) return [];
   const key = source === 'home-promos' ? 'homePromos' : 'projects';
   const list = Array.isArray(manifest[key]) ? manifest[key] : [];
-  return list.map(item => ({ ...item, src: item.path }));
+  return list.map(item => ({ ...item, src: encodeRepositoryPath(item.path) }));
 }
 
 async function fetchDirectoryItems(source) {
@@ -217,6 +217,10 @@ function parseImageFilename(name) {
   if (!title) title = titleFromUrl(url) || safeDecode(parts[0]) || 'Project';
 
   return { order, title, url };
+}
+
+function encodeRepositoryPath(value) {
+  return String(value || '').split('/').map(part => encodeURIComponent(part)).join('/');
 }
 
 function renderImageGallery(root, items, source) {
