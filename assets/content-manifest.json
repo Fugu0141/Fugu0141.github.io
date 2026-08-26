@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-26T11:16:37.987Z",
+  "generatedAt": "2026-08-26T11:44:44.031Z",
   "homePromos": [
     {
       "order": 9999,
@@ -30,6 +30,13 @@
       "url": "https://fugu0141.github.io/License_Creator",
       "name": "https%3A%2F%2Ffugu0141.github.io%2FLicense_Creator.png",
       "path": "content/projects/https%3A%2F%2Ffugu0141.github.io%2FLicense_Creator.png"
+    },
+    {
+      "order": 9999,
+      "title": "Deep Learning Study",
+      "url": "https://github.com/fugu0141/Deep_Learning_Study",
+      "name": "https%3A%2F%2Fgithub.com%2Ffugu0141%2FDeep_Learning_Study.png",
+      "path": "content/projects/https%3A%2F%2Fgithub.com%2Ffugu0141%2FDeep_Learning_Study.png"
     }
   ]
 }
