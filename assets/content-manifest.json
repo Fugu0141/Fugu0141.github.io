@@ -1,6 +1,13 @@
 {
-  "generatedAt": "2026-08-26T09:09:32.328Z",
+  "generatedAt": "2026-08-26T11:13:04.909Z",
   "homePromos": [
+    {
+      "order": 9999,
+      "title": "Cherry To Do",
+      "url": "https://fugu0141.github.io/Cherry-To-Do",
+      "name": "https%3A%2F%2Ffugu0141.github.io%2FCherry-To-Do.png",
+      "path": "content/home-promos/https%3A%2F%2Ffugu0141.github.io%2FCherry-To-Do.png"
+    },
     {
       "order": 9999,
       "title": "License Creator",
@@ -10,6 +17,13 @@
     }
   ],
   "projects": [
+    {
+      "order": 9999,
+      "title": "Cherry To Do",
+      "url": "https://fugu0141.github.io/Cherry-To-Do",
+      "name": "https%3A%2F%2Ffugu0141.github.io%2FCherry-To-Do.png",
+      "path": "content/projects/https%3A%2F%2Ffugu0141.github.io%2FCherry-To-Do.png"
+    },
     {
       "order": 9999,
       "title": "License Creator",
