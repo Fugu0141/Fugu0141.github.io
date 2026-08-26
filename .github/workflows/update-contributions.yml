@@ -8,6 +8,7 @@ on:
     branches:
       - main
       - redesign-game-portfolio
+      - redesign-playful-portfolio
     paths:
       - ".github/workflows/update-contributions.yml"
 
