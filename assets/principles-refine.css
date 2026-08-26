@@ -1,4 +1,4 @@
-/* Principles page: clearer hierarchy and more consistent spacing. */
+/* Principles page: quiet hierarchy, centered feature card, consistent accents. */
 
 .principles-hero{
   max-width:900px;
@@ -22,8 +22,8 @@
 
 .principle-feature{
   display:grid;
-  grid-template-columns:minmax(0,.9fr) minmax(300px,1.1fr);
-  gap:52px;
+  grid-template-columns:minmax(0,.92fr) minmax(300px,1.08fr);
+  gap:54px;
   align-items:center;
   padding:42px 44px;
   background:#fff;
@@ -31,20 +31,10 @@
   border-radius:30px;
 }
 
-.principle-feature-copy,
-.principle-feature-description{
-  align-self:center;
-}
-
-.principle-feature-label,
-.motto-label,
-.motto-card-label{
-  margin:0 0 9px;
-  color:#777c84;
-  font-size:.72rem;
-  font-weight:800;
-  letter-spacing:.1em;
-  text-transform:uppercase;
+.principle-feature-copy{
+  display:flex;
+  align-items:center;
+  min-height:100%;
 }
 
 .principle-feature h2{
@@ -56,6 +46,7 @@
 }
 
 .principle-feature-description{
+  align-self:center;
   margin:0;
   color:#626771;
   font-size:.98rem;
@@ -74,10 +65,6 @@
   letter-spacing:-.04em;
 }
 
-.motto-pair{
-  display:none!important;
-}
-
 .motto-grid{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
@@ -85,6 +72,8 @@
 }
 
 .motto-column{
+  --motto-accent:#dfe4f4;
+  --motto-ink:#5f74b9;
   position:relative;
   overflow:hidden;
   padding:30px;
@@ -93,66 +82,60 @@
   border-radius:28px;
 }
 
+.motto-column.challenge{
+  --motto-accent:#bfcdf8;
+  --motto-ink:#5676dc;
+}
+
+.motto-column.contribution{
+  --motto-accent:#efc6c1;
+  --motto-ink:#d36f68;
+}
+
 .motto-column::before{
   content:"";
   position:absolute;
   top:0;
   left:0;
   right:0;
-  height:6px;
-  background:#e7e9ee;
-}
-
-.motto-column.challenge::before{
-  background:#dce5ff;
-}
-
-.motto-column.contribution::before{
-  background:#f3dedb;
+  height:5px;
+  background:var(--motto-accent);
 }
 
 .motto-title{
   display:block;
   margin:0 0 24px;
-  padding:8px 0 20px;
+  padding:7px 0 20px;
   border-bottom:1px solid #ececef;
 }
 
 .motto-title h3{
   margin:0;
+  color:var(--motto-ink);
   font-size:clamp(1.85rem,3vw,2.35rem);
   line-height:1.05;
   letter-spacing:-.04em;
 }
 
-.motto-title > span{
-  display:none!important;
-}
-
-.motto-column.challenge .motto-title h3{
-  color:#5676dc;
-}
-
-.motto-column.contribution .motto-title h3{
-  color:#d36f68;
-}
-
 .principle-list{
   display:grid;
-  gap:24px;
+  gap:25px;
 }
 
 .principle-item{
   display:grid;
-  grid-template-columns:32px 1fr;
-  gap:14px;
+  grid-template-columns:12px 1fr;
+  gap:13px;
+  align-items:start;
 }
 
-.principle-number{
-  padding-top:3px;
-  color:#a0a5ac;
-  font-size:.72rem;
-  font-weight:800;
+.principle-bullet{
+  width:7px;
+  height:7px;
+  margin-top:.58em;
+  border-radius:50%;
+  background:var(--motto-ink);
+  opacity:.72;
 }
 
 .principle-item h4{
@@ -174,6 +157,10 @@
     grid-template-columns:1fr;
     gap:20px;
     align-items:start;
+  }
+
+  .principle-feature-copy{
+    min-height:0;
   }
 
   .principle-feature h2{
@@ -201,7 +188,7 @@
   }
 
   .principle-item{
-    grid-template-columns:28px 1fr;
-    gap:10px;
+    grid-template-columns:11px 1fr;
+    gap:11px;
   }
 }
