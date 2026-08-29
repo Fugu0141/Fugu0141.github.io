@@ -1,7 +1,7 @@
 const NAV_ITEMS=[
   ['projects','projects.html','つくったもの','Projects'],
   ['activity','activity.html','活動','Activity'],
-  ['principles','principles.html','考えていること','Principles'],
+  ['principles','principles.html','大切にしていること','Principles'],
   ['links','links.html','リンク','Links']
 ];
 

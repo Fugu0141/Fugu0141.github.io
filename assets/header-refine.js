@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const items = [
     ['home', 'index.html', 'トップ'],
     ['projects', 'projects.html', 'つくったもの'],
-    ['principles', 'principles.html', '考えていること'],
+    ['principles', 'principles.html', '大切にしていること'],
     ['links', 'links.html', '各種リンク']
   ];
 
