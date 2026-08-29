@@ -3,6 +3,7 @@
    principles.html 専用のCSSです。
 
    手修正するときは基本的にこのファイルだけ見ればOKです。
+   ヘッダー・フッター・ページ全体の基本色だけ共通CSSを使います。
 
    1. HERO            ページ上部のタイトル・説明文
    2. FEATURE         「人に寄り添うソフトを。」のカード
@@ -17,14 +18,21 @@
    「大切にしていること」の部分
    --------------------------------------------------------- */
 
-/* HERO全体の最大横幅 */
+/* HERO全体：横幅、上下余白、下線 */
 .principles-hero{
+  position:relative;
   max-width:900px;
+  padding:64px 0 34px;
+  border-bottom:1px solid #dedfda;
 }
 
-/* 「大切にしていること」の文字サイズ */
+/* 「大切にしていること」 */
 .principles-hero h1{
+  margin:0;
   font-size:clamp(3rem,5.6vw,4.8rem);
+  line-height:1;
+  letter-spacing:-.055em;
+  font-weight:850;
 }
 
 /* タイトル下の説明文 */
@@ -42,9 +50,9 @@
    「人に寄り添うソフトを。」のカード
    --------------------------------------------------------- */
 
-/* HERO下からカードまでの余白 */
+/* ページ本文全体の上下余白 */
 .principles-section{
-  padding-top:42px;
+  padding:42px 0 70px;
 }
 
 /* カード全体 */
@@ -161,6 +169,15 @@
   letter-spacing:-.04em;
 }
 
+/* 見出し文字の色（既存デザインを維持） */
+.motto-column.challenge .motto-title h3{
+  color:var(--blue);
+}
+
+.motto-column.contribution .motto-title h3{
+  color:#dc6f68;
+}
+
 
 /* ---------------------------------------------------------
    4. ITEMS
@@ -236,6 +253,14 @@
 
 /* スマホ */
 @media (max-width:680px){
+  .principles-hero{
+    padding:50px 0 28px;
+  }
+
+  .principles-section{
+    padding:42px 0 56px;
+  }
+
   .principle-feature{
     padding:28px 24px;
     border-radius:24px;
