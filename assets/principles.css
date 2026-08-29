@@ -1,13 +1,41 @@
-/* Principles page: quiet hierarchy, centered feature card, consistent accents. */
+/* =========================================================
+   Principles page only
+   principles.html 専用のCSSです。
 
+   手修正するときは基本的にこのファイルだけ見ればOKです。
+   ヘッダー・フッター・ページ全体の基本色だけ共通CSSを使います。
+
+   1. HERO            ページ上部のタイトル・説明文
+   2. FEATURE         「人に寄り添うソフトを。」のカード
+   3. MOTTO           「挑戦」「貢献」の2カラム
+   4. ITEMS           各項目の見出し・本文・丸印
+   5. RESPONSIVE      タブレット / スマホ表示
+   ========================================================= */
+
+
+/* ---------------------------------------------------------
+   1. HERO
+   「大切にしていること」の部分
+   --------------------------------------------------------- */
+
+/* HERO全体：横幅、上下余白、下線 */
 .principles-hero{
+  position:relative;
   max-width:900px;
+  padding:64px 0 34px;
+  border-bottom:1px solid #dedfda;
 }
 
+/* 「大切にしていること」 */
 .principles-hero h1{
+  margin:0;
   font-size:clamp(3rem,5.6vw,4.8rem);
+  line-height:1;
+  letter-spacing:-.055em;
+  font-weight:850;
 }
 
+/* タイトル下の説明文 */
 .principles-hero p:last-child{
   max-width:720px;
   margin:18px 0 0;
@@ -16,10 +44,18 @@
   line-height:1.9;
 }
 
+
+/* ---------------------------------------------------------
+   2. FEATURE
+   「人に寄り添うソフトを。」のカード
+   --------------------------------------------------------- */
+
+/* ページ本文全体の上下余白 */
 .principles-section{
-  padding-top:42px;
+  padding:42px 0 70px;
 }
 
+/* カード全体 */
 .principle-feature{
   display:grid;
   grid-template-columns:minmax(0,.92fr) minmax(300px,1.08fr);
@@ -31,12 +67,14 @@
   border-radius:30px;
 }
 
+/* 左側の見出しエリア */
 .principle-feature-copy{
   display:flex;
   align-items:center;
   min-height:100%;
 }
 
+/* 「人に寄り添うソフトを。」 */
 .principle-feature h2{
   margin:0;
   max-width:420px;
@@ -45,6 +83,7 @@
   letter-spacing:-.045em;
 }
 
+/* カード右側の説明文 */
 .principle-feature-description{
   align-self:center;
   margin:0;
@@ -53,6 +92,13 @@
   line-height:1.9;
 }
 
+
+/* ---------------------------------------------------------
+   3. MOTTO
+   「モットーは『挑戦』と『貢献』」以下
+   --------------------------------------------------------- */
+
+/* セクション見出し */
 .motto-head{
   display:block;
   margin:54px 0 22px;
@@ -65,12 +111,14 @@
   letter-spacing:-.04em;
 }
 
+/* 挑戦・貢献の2カラム */
 .motto-grid{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
   gap:20px;
 }
 
+/* 挑戦・貢献カード共通 */
 .motto-column{
   --motto-accent:#dfe4f4;
   --motto-ink:#5f74b9;
@@ -82,16 +130,19 @@
   border-radius:28px;
 }
 
+/* 挑戦カードの色 */
 .motto-column.challenge{
   --motto-accent:#bfcdf8;
   --motto-ink:#5676dc;
 }
 
+/* 貢献カードの色 */
 .motto-column.contribution{
   --motto-accent:#efc6c1;
   --motto-ink:#d36f68;
 }
 
+/* カード上端のアクセントライン */
 .motto-column::before{
   content:"";
   position:absolute;
@@ -102,6 +153,7 @@
   background:var(--motto-accent);
 }
 
+/* 「挑戦」「貢献」の見出し部分 */
 .motto-title{
   display:block;
   margin:0 0 24px;
@@ -117,11 +169,28 @@
   letter-spacing:-.04em;
 }
 
+/* 見出し文字の色（既存デザインを維持） */
+.motto-column.challenge .motto-title h3{
+  color:var(--blue);
+}
+
+.motto-column.contribution .motto-title h3{
+  color:#dc6f68;
+}
+
+
+/* ---------------------------------------------------------
+   4. ITEMS
+   挑戦・貢献カード内の各項目
+   --------------------------------------------------------- */
+
+/* 項目同士の縦間隔 */
 .principle-list{
   display:grid;
   gap:25px;
 }
 
+/* 丸印 + 本文 の並び */
 .principle-item{
   display:grid;
   grid-template-columns:12px 1fr;
@@ -129,6 +198,7 @@
   align-items:start;
 }
 
+/* 左側の丸印 */
 .principle-bullet{
   width:7px;
   height:7px;
@@ -138,6 +208,7 @@
   opacity:.72;
 }
 
+/* 各項目の見出し */
 .principle-item h4{
   margin:0 0 7px;
   font-size:1.05rem;
@@ -145,6 +216,7 @@
   letter-spacing:-.02em;
 }
 
+/* 各項目の説明文 */
 .principle-item p{
   margin:0;
   color:#6a6f77;
@@ -152,6 +224,13 @@
   line-height:1.85;
 }
 
+
+/* ---------------------------------------------------------
+   5. RESPONSIVE
+   画面が狭いときだけ適用される調整
+   --------------------------------------------------------- */
+
+/* タブレット以下 */
 @media (max-width:920px){
   .principle-feature{
     grid-template-columns:1fr;
@@ -172,7 +251,16 @@
   }
 }
 
+/* スマホ */
 @media (max-width:680px){
+  .principles-hero{
+    padding:50px 0 28px;
+  }
+
+  .principles-section{
+    padding:42px 0 56px;
+  }
+
   .principle-feature{
     padding:28px 24px;
     border-radius:24px;

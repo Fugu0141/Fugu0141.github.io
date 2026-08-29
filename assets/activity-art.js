@@ -1,3 +1,9 @@
+/* =========================================================
+   Activity world-map renderer
+   世界地図上の365個の光とContributionデータ取得だけを担当します。
+   ページUI・言語切替・背景演出は activity-page.js 側です。
+   ========================================================= */
+
 document.addEventListener('DOMContentLoaded',()=>{
   const canvas=document.querySelector('[data-activity-art]');
   if(!canvas)return;
@@ -224,7 +230,7 @@ function reorderPoints(points){
 async function loadContributionData(dayCount){
   const sources=[
     {name:'local-json',url:'assets/contributions.json'},
-    {name:'branch-raw-json',url:'https://raw.githubusercontent.com/Fugu0141/Fugu0141.github.io/redesign-game-portfolio/assets/contributions.json'}
+    {name:'main-raw-json',url:'https://raw.githubusercontent.com/Fugu0141/Fugu0141.github.io/main/assets/contributions.json'}
   ];
   for(const source of sources){
     try{
