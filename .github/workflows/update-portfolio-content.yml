@@ -6,6 +6,7 @@ on:
     paths:
       - "content/home-promos/**/*.png"
       - "content/projects/**/*.png"
+      - "scripts/build-content-manifest.js"
       - ".github/workflows/update-portfolio-content.yml"
 
 permissions:
@@ -21,86 +22,7 @@ jobs:
           ref: ${{ github.ref_name }}
 
       - name: Build image manifest
-        shell: node {0}
-        run: |
-          const fs = require('fs');
-          const path = require('path');
-
-          const root = process.cwd();
-
-          function decode(value) {
-            try { return decodeURIComponent(value || ''); }
-            catch { return value || ''; }
-          }
-
-          function isHttpUrl(value) {
-            try {
-              const url = new URL(value);
-              return url.protocol === 'http:' || url.protocol === 'https:';
-            } catch {
-              return false;
-            }
-          }
-
-          function titleFromUrl(value) {
-            if (!value) return '';
-            try {
-              const url = new URL(value);
-              const last = url.pathname.split('/').filter(Boolean).pop();
-              return last ? decode(last).replace(/[-_]+/g, ' ') : url.hostname.replace(/^www\./, '');
-            } catch {
-              return '';
-            }
-          }
-
-          function parseName(name) {
-            const stem = name.replace(/\.png$/i, '');
-            const parts = stem.split('__');
-            let order = 9999;
-            let title = '';
-            let url = '';
-
-            if (parts.length >= 3 && /^\d+$/.test(parts[0])) {
-              order = Number(parts[0]);
-              title = decode(parts[1]);
-              url = decode(parts.slice(2).join('__'));
-            } else if (parts.length >= 2 && /^\d+$/.test(parts[0])) {
-              order = Number(parts[0]);
-              url = decode(parts.slice(1).join('__'));
-            } else {
-              url = decode(stem);
-            }
-
-            if (!isHttpUrl(url)) url = '';
-            if (!title) title = titleFromUrl(url) || decode(parts[0]) || 'Project';
-            return { order, title, url };
-          }
-
-          function scan(relativeDir) {
-            const absolute = path.join(root, relativeDir);
-            if (!fs.existsSync(absolute)) return [];
-            return fs.readdirSync(absolute, { withFileTypes: true })
-              .filter(entry => entry.isFile() && /\.png$/i.test(entry.name))
-              .map(entry => ({
-                ...parseName(entry.name),
-                name: entry.name,
-                path: `${relativeDir}/${entry.name}`.replace(/\\/g, '/')
-              }))
-              .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, 'ja'));
-          }
-
-          const output = {
-            generatedAt: new Date().toISOString(),
-            homePromos: scan('content/home-promos'),
-            projects: scan('content/projects')
-          };
-
-          fs.mkdirSync(path.join(root, 'assets'), { recursive: true });
-          fs.writeFileSync(
-            path.join(root, 'assets', 'content-manifest.json'),
-            JSON.stringify(output, null, 2) + '\n',
-            'utf8'
-          );
+        run: node scripts/build-content-manifest.js
 
       - name: Commit manifest
         shell: bash
@@ -109,6 +31,7 @@ jobs:
             echo "Portfolio image manifest is already up to date."
             exit 0
           fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets/content-manifest.json
