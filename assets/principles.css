@@ -21,7 +21,7 @@
 /* HERO全体：横幅、上下余白、下線 */
 .principles-hero{
   position:relative;
-  max-width:900px;
+  max-width:none;
   padding:64px 0 34px;
   border-bottom:1px solid #dedfda;
 }
