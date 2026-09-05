@@ -170,6 +170,7 @@ button,input{font:inherit}
   align-items:center;
 }
 .hero-copy{max-width:780px;min-width:0}
+.hero-intro{min-width:0}
 .eyebrow{
   display:block;
   margin:0 0 12px;
@@ -594,7 +595,8 @@ button,input{font:inherit}
 }
 
 /* Mobile header + home hero.
-   ここは上の共通レスポンシブより後に置き、ホーム画面の最終形を明示します。 */
+   名前とリード文を .hero-intro でひとまとまりにし、
+   右側のプロフィールカードの高さに行間が引っ張られない構造にします。 */
 @media (max-width:760px){
   .portfolio-header{backdrop-filter:blur(16px)}
   .header-inner{
@@ -706,7 +708,6 @@ button,input{font:inherit}
     min-height:auto;
     display:grid;
     grid-template-columns:minmax(0,1fr) clamp(116px,25vw,150px);
-    grid-template-rows:auto auto auto auto auto auto auto;
     column-gap:clamp(12px,3vw,18px);
     row-gap:0;
     align-items:start;
@@ -718,10 +719,13 @@ button,input{font:inherit}
     grid-row:1;
     margin:0 0 16px;
   }
-  .hero h1{
+  .hero-intro{
     grid-column:1;
     grid-row:2;
     align-self:start;
+    min-width:0;
+  }
+  .hero h1{
     flex-wrap:nowrap;
     gap:.03em;
     font-size:clamp(2.45rem,9vw,3.6rem);
@@ -730,16 +734,13 @@ button,input{font:inherit}
     white-space:nowrap;
   }
   .hero-lead{
-    grid-column:1;
-    grid-row:3;
-    align-self:start;
-    margin:15px 0 0;
+    margin:14px 0 0;
     font-size:clamp(1.08rem,4.2vw,1.35rem);
     line-height:1.45;
   }
   .hero-visual{
     grid-column:2;
-    grid-row:2/4;
+    grid-row:2;
     align-self:start;
     justify-self:stretch;
   }
@@ -785,29 +786,18 @@ button,input{font:inherit}
   .button{width:100%;padding:0 12px;font-size:.82rem;white-space:nowrap}
 }
 
-/* Keep the name/lead and avatar aligned as two columns on ordinary phones.
-   Both the text and the card shrink continuously instead of changing rows at an arbitrary width. */
+/* Ordinary phones keep the two-column composition. The intro remains internally stacked,
+   so only the whole block and card resize; the lead can never be pushed down by the card. */
 @media (max-width:520px){
   .hero{
     grid-template-columns:minmax(0,1fr) clamp(104px,26vw,128px);
     column-gap:clamp(10px,3vw,14px);
     padding-top:32px;
   }
-  .hero h1{
-    grid-column:1;
-    grid-row:2;
-    font-size:clamp(2.15rem,9vw,2.9rem);
-  }
+  .hero h1{font-size:clamp(2.15rem,9vw,2.9rem)}
   .hero-lead{
-    grid-column:1;
-    grid-row:3;
     font-size:clamp(1rem,4vw,1.15rem);
-    margin-top:14px;
-  }
-  .hero-visual{
-    grid-column:2;
-    grid-row:2/4;
-    margin-top:0;
+    margin-top:12px;
   }
   .avatar-label{margin-top:8px}
   .avatar-label strong{font-size:.57rem}
@@ -823,7 +813,7 @@ button,input{font:inherit}
   }
   .hero .eyebrow{margin-bottom:13px}
   .hero h1{font-size:clamp(2.05rem,9.5vw,2.5rem)}
-  .hero-lead{font-size:.98rem;margin-top:12px}
+  .hero-lead{font-size:.98rem;margin-top:10px}
   .avatar-card{
     border-radius:18px;
     box-shadow:4px 4px 0 #e8e8e3;
@@ -854,15 +844,15 @@ button,input{font:inherit}
   .header-inner.is-menu-open .header-support{grid-template-columns:1fr}
 }
 
-/* Extremely narrow embedded views cannot keep both columns readable.
-   Stack only here; normal 320px-class phones continue to use the aligned two-column layout. */
+/* Only extremely narrow embedded views stack the card. 320px-class phones stay aligned. */
 @media (max-width:300px){
   .hero{grid-template-columns:1fr}
-  .hero h1,.hero-lead{grid-column:1}
+  .hero .eyebrow{grid-column:1;grid-row:1}
+  .hero-intro{grid-column:1;grid-row:2}
   .hero h1{font-size:2rem}
   .hero-visual{
     grid-column:1;
-    grid-row:4;
+    grid-row:3;
     width:104px;
     justify-self:start;
     margin-top:18px;
