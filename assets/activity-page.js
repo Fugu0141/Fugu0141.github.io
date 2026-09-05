@@ -1,7 +1,7 @@
 /* =========================================================
    Activity page shell
    - ヘッダー / フッター
-   - 日本語 / English 切り替え
+   - URLベースの日本語 / English 切り替え
    - スクロール表示アニメーション
    - 背景のp5バブル
 
@@ -15,15 +15,21 @@ const ACTIVITY_NAV_ITEMS = [
   ['links', 'links.html', 'リンク', 'Links']
 ];
 
+const ACTIVITY_LANGUAGE = document.body.dataset.lang === 'en' ? 'en' : 'ja';
+
+function activityHref(file, language = ACTIVITY_LANGUAGE) {
+  return language === 'en' ? `/en/${file}` : `/${file}`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   renderActivityChrome();
-
-  const savedLanguage = localStorage.getItem('fugu-language');
-  setActivityLanguage(savedLanguage === 'en' ? 'en' : 'ja');
+  setActivityLanguage(ACTIVITY_LANGUAGE);
 
   document.querySelectorAll('[data-lang-button]').forEach(button => {
     button.addEventListener('click', () => {
-      setActivityLanguage(button.dataset.langButton);
+      const target = button.dataset.langButton === 'en' ? 'en' : 'ja';
+      if (target === ACTIVITY_LANGUAGE) return;
+      location.href = activityHref('activity.html', target);
     });
   });
 
@@ -38,12 +44,12 @@ function renderActivityChrome() {
     header.className = 'site-header';
     header.innerHTML = `
       <div class="shell header-inner">
-        <a class="brand" href="index.html" aria-label="Fugu profile">
+        <a class="brand" href="${ACTIVITY_LANGUAGE === 'en' ? '/en/' : '/'}" aria-label="Fugu profile">
           <span class="brand-bubble" aria-hidden="true"></span>Fugu
         </a>
         <nav class="nav-links" aria-label="Main navigation">
-          ${ACTIVITY_NAV_ITEMS.map(([id, href, ja, en]) => `
-            <a href="${href}" data-nav="${id}"${id === current ? ' aria-current="page"' : ''}>
+          ${ACTIVITY_NAV_ITEMS.map(([id, file, ja, en]) => `
+            <a href="${activityHref(file)}" data-nav="${id}"${id === current ? ' aria-current="page"' : ''}>
               <span class="lang-ja">${ja}</span><span class="lang-en">${en}</span>
             </a>`).join('')}
         </nav>
@@ -72,7 +78,12 @@ function setActivityLanguage(language) {
   const value = language === 'en' ? 'en' : 'ja';
   document.documentElement.lang = value;
   document.body.dataset.lang = value;
-  localStorage.setItem('fugu-language', value);
+
+  try {
+    localStorage.setItem('fugu-language', value);
+  } catch (_) {
+    // Storage is optional; URL remains the source of truth.
+  }
 
   document.querySelectorAll('[data-lang-button]').forEach(button => {
     const active = button.dataset.langButton === value;

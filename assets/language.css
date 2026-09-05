@@ -1,0 +1,87 @@
+/* =========================================================
+   Portfolio language selector
+   Separated from portfolio.css so localization UI stays isolated from the
+   site's main visual system and can be maintained without override files.
+   ========================================================= */
+
+.portfolio-language-switch{
+  display:inline-flex;
+  align-items:center;
+  gap:2px;
+  flex:0 0 auto;
+  padding:3px;
+  border:1px solid #d9dbe0;
+  border-radius:12px;
+  background:#fff;
+}
+
+.portfolio-language-switch a{
+  min-width:34px;
+  min-height:30px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:0 8px;
+  border-radius:9px;
+  color:#6a7078;
+  text-decoration:none;
+  font-size:.7rem;
+  font-weight:800;
+  line-height:1;
+  white-space:nowrap;
+  transition:background .15s ease,color .15s ease,transform .15s ease;
+}
+
+.portfolio-language-switch a:hover{
+  color:var(--ink);
+  background:#f3f3ef;
+}
+
+.portfolio-language-switch a[aria-current="true"]{
+  background:var(--ink);
+  color:#fff;
+}
+
+@media (max-width:1100px){
+  .portfolio-language-switch a{padding:0 6px;font-size:.67rem}
+}
+
+/* Between tablet and mobile-menu widths, support icons are the least essential
+   header item. Collapse their labels to preserve a stable single-line header. */
+@media (min-width:761px) and (max-width:920px){
+  .header-support-link{width:36px;padding:0}
+  .header-support-link span:last-child{display:none}
+}
+
+@media (max-width:760px){
+  .portfolio-language-switch{
+    order:5;
+    width:100%;
+    margin:0 0 4px;
+    padding:0 0 6px;
+    display:none;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:7px;
+    border:0;
+    border-radius:0;
+    background:transparent;
+  }
+
+  .header-inner.is-menu-open .portfolio-language-switch{display:grid}
+
+  .portfolio-language-switch a{
+    min-height:42px;
+    width:100%;
+    padding:0 10px;
+    border:1px solid #e0e1e4;
+    border-radius:13px;
+    background:#fff;
+    font-size:.76rem;
+  }
+
+  .portfolio-language-switch a[aria-current="true"]{
+    border-color:var(--ink);
+    background:var(--ink);
+    color:#fff;
+  }
+}

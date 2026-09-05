@@ -10,13 +10,37 @@
 | --- | --- |
 | トップページ・Projects・Linksの共通デザイン | `assets/portfolio.css` |
 | ヘッダー、フッター、モバイルメニュー | `assets/portfolio.js` / `assets/portfolio.css` |
+| 日本語 / English のURL切替・共通言語UI | `assets/localization.js` / `assets/language.css` |
 | トップページのContribution表示 | `assets/portfolio.js` / `assets/portfolio.css` |
 | トップ・Projectsの画像一覧 | `assets/portfolio.js` / `content/` |
-| 「大切にしていること」ページ | `assets/principles.css` / `principles.html` |
-| Activityページの通常UI | `assets/activity.css` / `assets/activity-page.js` |
-| Activityページの世界地図描画 | `assets/activity-art.js` |
+| 「大切にしていること」ページ | `assets/principles.css` / `principles.html` / `en/principles.html` |
+| Activityページ | `assets/activity.css` / `assets/activity-page.js` / `assets/activity-art.js` |
 | 404ページ | `assets/404.css` / `assets/404.js` / `404.html` |
 | 制作物の画像・リンク | `content/home-promos/` / `content/projects/` |
+
+## 言語URLとOGP
+
+日本語は従来どおりサイト直下、英語は `/en/` 配下に置きます。URL自体を言語の判定元にすることで、JavaScriptを実行しないSNSクローラーにも正しい言語のOGPを返せます。
+
+| ページ | 日本語 | English |
+| --- | --- | --- |
+| Home | `/` | `/en/` |
+| Projects | `/projects.html` | `/en/projects.html` |
+| Principles | `/principles.html` | `/en/principles.html` |
+| Links | `/links.html` | `/en/links.html` |
+| Activity | `/activity.html` | `/en/activity.html` |
+
+各言語ページの `<head>` には、次を静的に記述します。
+
+- `canonical`
+- `hreflang="ja"` / `hreflang="en"` / `hreflang="x-default"`
+- 言語ごとの `title` / `description`
+- 言語ごとの `og:title` / `og:description` / `og:url` / `og:locale`
+- Twitter Cardのタイトル・説明
+
+`assets/localization.js` は共通ヘッダーのナビゲーション、サポート項目、言語選択UIを現在の `html[lang]` に合わせます。OGPはクローラー対応のためJavaScriptでは変更しません。
+
+英語ページには `<base href="/">` を置き、共通CSS・JS・画像・自動生成コンテンツを日本語ページと同じルート資産から参照します。これにより `/en/` 用に `assets/` や `content/` を複製しません。
 
 ## ファイルの役割
 
@@ -39,6 +63,10 @@ CSSはファイル内で次の順に分けています。
 
 以前のような `*-refine.css` による後付け上書きは行いません。
 
+### `assets/localization.js` / `assets/language.css`
+
+言語URLと共通の言語選択UIだけを担当します。ページ本文の翻訳は各言語のHTMLに静的に置きます。これにより、OGPと本文の言語がURLごとに一致します。
+
 ### `assets/portfolio.js`
 
 自己紹介サイトの共通動作を管理します。
@@ -52,19 +80,15 @@ CSSはファイル内で次の順に分けています。
 
 ### `assets/principles.css`
 
-`principles.html` 専用です。
-
-「大切にしていること」ページの見た目を変える場合は、基本的にこのファイルだけを確認してください。
+`principles.html` と `en/principles.html` 専用です。言語ごとに別CSSを作らず、同じカードレイアウトを共有します。
 
 ### Activity
 
 Activityは世界地図描画が特殊なため、自己紹介サイト本体とは意図的に分離しています。
 
 - `assets/activity.css`: Activityの見た目
-- `assets/activity-page.js`: ヘッダー・言語切替・背景演出
+- `assets/activity-page.js`: ヘッダー・URLベースの言語切替・背景演出
 - `assets/activity-art.js`: 365個の光と世界地図の描画
-
-1ファイルに全部詰め込まず、役割ごとに分けています。
 
 ### 404
 
@@ -91,14 +115,7 @@ URL.png
 
 URL部分はURLエンコードしても構いません。
 
-例:
-
-```text
-01__Cherry__https%3A%2F%2Ffugu0141.github.io%2FCherry-ToDo.png
-```
-
-GitHub上では `.github/workflows/update-portfolio-content.yml` が `assets/content-manifest.json` を自動生成します。
-生成処理本体は `scripts/build-content-manifest.js` にあります。
+GitHub上では `.github/workflows/update-portfolio-content.yml` が `assets/content-manifest.json` を自動生成します。生成処理本体は `scripts/build-content-manifest.js` にあります。
 
 ## 自動生成ファイル
 
@@ -125,9 +142,11 @@ Windowsでは次のどちらかを利用できます。
 不具合修正やデザイン変更の際は、次を基本方針にします。
 
 - `*-refine.css` / `*-refine.js` のような後付け修正ファイルを増やさない
-- 同じDOMを複数のJavaScriptから書き換えない
+- 同じDOMを複数のJavaScriptから競合して書き換えない
 - 同じ描画ロジックを `fallback` 用にコピーしない
 - ページ固有のCSSは、そのページ専用ファイルに置く
+- 日本語ページを変更した場合、対応する `/en/` ページも同時に確認する
+- OGPはJavaScript切替にせず、言語URLごとのHTMLへ静的に置く
 - 自動生成処理はGitHub Actions YAMLへ長く直書きせず、可能なら `scripts/` に置く
 - 使われなくなった旧コード・旧ブランチ参照は残さない
 
