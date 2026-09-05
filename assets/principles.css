@@ -2,23 +2,19 @@
    Principles page only
    principles.html 専用のCSSです。
 
-   手修正するときは基本的にこのファイルだけ見ればOKです。
-   ヘッダー・フッター・ページ全体の基本色だけ共通CSSを使います。
+   共通のヘッダー・フッター・基本色は portfolio.css を使用し、
+   このファイルでは「大切にしていること」ページ固有の見た目だけを管理します。
 
-   1. HERO            ページ上部のタイトル・説明文
-   2. FEATURE         「人に寄り添うソフトを。」のカード
-   3. MOTTO           「挑戦」「貢献」の2カラム
-   4. ITEMS           各項目の見出し・本文・丸印
-   5. RESPONSIVE      タブレット / スマホ表示
+   1. HERO
+   2. FEATURE
+   3. MOTTO
+   4. ITEMS
+   5. RESPONSIVE
    ========================================================= */
-
 
 /* ---------------------------------------------------------
    1. HERO
-   「大切にしていること」の部分
    --------------------------------------------------------- */
-
-/* HERO全体：横幅、上下余白、下線 */
 .principles-hero{
   position:relative;
   max-width:none;
@@ -26,138 +22,193 @@
   border-bottom:1px solid #dedfda;
 }
 
-/* 「大切にしていること」 */
 .principles-hero h1{
   margin:0;
+  max-width:100%;
   font-size:clamp(3rem,5.6vw,4.8rem);
   line-height:1;
   letter-spacing:-.055em;
   font-weight:850;
+  text-wrap:balance;
+  overflow-wrap:anywhere;
 }
 
-/* タイトル下の説明文 */
 .principles-hero p:last-child{
   max-width:720px;
   margin:18px 0 0;
   color:#626771;
   font-size:1rem;
   line-height:1.9;
+  overflow-wrap:anywhere;
 }
 
+.principles-section{padding:42px 0 70px}
 
 /* ---------------------------------------------------------
    2. FEATURE
-   「人に寄り添うソフトを。」のカード
+   Linksページのカードを基準に、クリック要素に見えすぎない形へ再構成。
    --------------------------------------------------------- */
-
-/* ページ本文全体の上下余白 */
-.principles-section{
-  padding:42px 0 70px;
-}
-
-/* カード全体 */
 .principle-feature{
+  --feature-accent:var(--cyan);
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
   display:grid;
-  grid-template-columns:minmax(0,.92fr) minmax(300px,1.08fr);
-  gap:54px;
-  align-items:center;
-  padding:42px 44px;
+  grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);
+  gap:clamp(30px,4.5vw,58px);
+  align-items:end;
+  min-width:0;
+  min-height:270px;
+  padding:38px 42px 40px;
   background:#fff;
   border:1px solid #dfe1e4;
   border-radius:30px;
 }
 
-/* 左側の見出しエリア */
+.principle-feature::before{
+  content:"01";
+  position:absolute;
+  top:28px;
+  left:42px;
+  z-index:2;
+  color:#a1a6ad;
+  font-size:.72rem;
+  font-weight:800;
+  letter-spacing:.02em;
+}
+
+.principle-feature::after{
+  content:"";
+  position:absolute;
+  right:-32px;
+  bottom:-40px;
+  z-index:0;
+  width:176px;
+  height:136px;
+  border-radius:92px 0 0 0;
+  background:var(--feature-accent);
+}
+
+.principle-feature-copy,
+.principle-feature-description{
+  position:relative;
+  z-index:1;
+  min-width:0;
+}
+
 .principle-feature-copy{
   display:flex;
-  align-items:center;
+  align-items:flex-end;
   min-height:100%;
+  padding-top:34px;
 }
 
-/* 「人に寄り添うソフトを。」 */
 .principle-feature h2{
   margin:0;
-  max-width:420px;
-  font-size:clamp(1.9rem,3vw,2.65rem);
-  line-height:1.16;
-  letter-spacing:-.045em;
+  max-width:430px;
+  font-size:clamp(2rem,3.1vw,2.75rem);
+  line-height:1.12;
+  letter-spacing:-.05em;
+  text-wrap:balance;
+  overflow-wrap:anywhere;
 }
 
-/* カード右側の説明文 */
 .principle-feature-description{
-  align-self:center;
   margin:0;
+  max-width:560px;
+  padding-right:clamp(0px,3vw,34px);
   color:#626771;
   font-size:.98rem;
   line-height:1.9;
+  overflow-wrap:anywhere;
 }
-
 
 /* ---------------------------------------------------------
    3. MOTTO
-   「モットーは『挑戦』と『貢献』」以下
    --------------------------------------------------------- */
-
-/* セクション見出し */
 .motto-head{
   display:block;
-  margin:54px 0 22px;
+  margin:56px 0 22px;
 }
 
 .motto-head h2{
   margin:0;
+  max-width:100%;
   font-size:clamp(1.85rem,3vw,2.5rem);
   line-height:1.16;
   letter-spacing:-.04em;
+  text-wrap:balance;
+  word-break:auto-phrase;
+  overflow-wrap:anywhere;
 }
 
-/* 挑戦・貢献の2カラム */
 .motto-grid{
   display:grid;
   grid-template-columns:repeat(2,minmax(0,1fr));
   gap:20px;
 }
 
-/* 挑戦・貢献カード共通 */
 .motto-column{
   --motto-accent:#dfe4f4;
   --motto-ink:#5f74b9;
   position:relative;
+  isolation:isolate;
   overflow:hidden;
+  min-width:0;
+  min-height:390px;
   padding:30px;
   background:#fff;
   border:1px solid #dfe1e4;
   border-radius:28px;
 }
 
-/* 挑戦カードの色 */
 .motto-column.challenge{
   --motto-accent:#bfcdf8;
   --motto-ink:#5676dc;
 }
 
-/* 貢献カードの色 */
 .motto-column.contribution{
-  --motto-accent:#efc6c1;
+  --motto-accent:#efb5ae;
   --motto-ink:#d36f68;
 }
 
-/* カード上端のアクセントライン */
 .motto-column::before{
+  position:absolute;
+  top:26px;
+  left:30px;
+  z-index:2;
+  color:#a1a6ad;
+  font-size:.72rem;
+  font-weight:800;
+  letter-spacing:.02em;
+}
+
+.motto-column.challenge::before{content:"02"}
+.motto-column.contribution::before{content:"03"}
+
+.motto-column::after{
   content:"";
   position:absolute;
-  top:0;
-  left:0;
-  right:0;
-  height:5px;
+  right:-34px;
+  bottom:-40px;
+  z-index:0;
+  width:150px;
+  height:112px;
+  border-radius:78px 0 0 0;
   background:var(--motto-accent);
 }
 
-/* 「挑戦」「貢献」の見出し部分 */
+.motto-title,
+.principle-list{
+  position:relative;
+  z-index:1;
+  min-width:0;
+}
+
 .motto-title{
   display:block;
   margin:0 0 24px;
-  padding:7px 0 20px;
+  padding:32px 0 20px;
   border-bottom:1px solid #ececef;
 }
 
@@ -169,36 +220,26 @@
   letter-spacing:-.04em;
 }
 
-/* 見出し文字の色（既存デザインを維持） */
-.motto-column.challenge .motto-title h3{
-  color:var(--blue);
-}
-
-.motto-column.contribution .motto-title h3{
-  color:#dc6f68;
-}
-
+.motto-column.challenge .motto-title h3{color:var(--blue)}
+.motto-column.contribution .motto-title h3{color:#dc6f68}
 
 /* ---------------------------------------------------------
    4. ITEMS
-   挑戦・貢献カード内の各項目
    --------------------------------------------------------- */
-
-/* 項目同士の縦間隔 */
 .principle-list{
   display:grid;
   gap:25px;
+  padding-right:clamp(0px,2vw,20px);
 }
 
-/* 丸印 + 本文 の並び */
 .principle-item{
   display:grid;
-  grid-template-columns:12px 1fr;
+  grid-template-columns:12px minmax(0,1fr);
   gap:13px;
   align-items:start;
+  min-width:0;
 }
 
-/* 左側の丸印 */
 .principle-bullet{
   width:7px;
   height:7px;
@@ -208,34 +249,33 @@
   opacity:.72;
 }
 
-/* 各項目の見出し */
 .principle-item h4{
   margin:0 0 7px;
+  max-width:100%;
   font-size:1.05rem;
   line-height:1.5;
   letter-spacing:-.02em;
+  text-wrap:balance;
+  overflow-wrap:anywhere;
 }
 
-/* 各項目の説明文 */
 .principle-item p{
   margin:0;
   color:#6a6f77;
   font-size:.92rem;
   line-height:1.85;
+  overflow-wrap:anywhere;
 }
-
 
 /* ---------------------------------------------------------
    5. RESPONSIVE
-   画面が狭いときだけ適用される調整
    --------------------------------------------------------- */
-
-/* タブレット以下 */
 @media (max-width:920px){
   .principle-feature{
     grid-template-columns:1fr;
-    gap:20px;
+    gap:18px;
     align-items:start;
+    min-height:0;
   }
 
   .principle-feature-copy{
@@ -243,40 +283,103 @@
   }
 
   .principle-feature h2{
-    max-width:none;
+    max-width:620px;
   }
 
-  .motto-grid{
-    grid-template-columns:1fr;
+  .principle-feature-description{
+    max-width:680px;
+    padding-right:72px;
   }
+
+  .motto-grid{grid-template-columns:1fr}
+  .motto-column{min-height:0}
 }
 
-/* スマホ */
 @media (max-width:680px){
-  .principles-hero{
-    padding:50px 0 28px;
+  .principles-hero{padding:50px 0 28px}
+  .principles-hero h1{
+    font-size:clamp(2rem,10vw,3.2rem);
+    line-height:1.04;
+    letter-spacing:-.05em;
+  }
+  .principles-hero p:last-child{
+    margin-top:16px;
+    font-size:.95rem;
+    line-height:1.85;
   }
 
-  .principles-section{
-    padding:42px 0 56px;
-  }
+  .principles-section{padding:38px 0 56px}
 
   .principle-feature{
-    padding:28px 24px;
+    padding:27px 24px 28px;
     border-radius:24px;
+    gap:18px;
+  }
+  .principle-feature::before{top:22px;left:24px}
+  .principle-feature::after{
+    right:-30px;
+    bottom:-34px;
+    width:122px;
+    height:94px;
+  }
+  .principle-feature-copy{padding-top:31px}
+  .principle-feature h2{
+    max-width:85%;
+    font-size:clamp(1.75rem,8vw,2.15rem);
+    line-height:1.14;
+  }
+  .principle-feature-description{
+    max-width:none;
+    padding-right:34px;
+    font-size:.94rem;
+    line-height:1.85;
   }
 
-  .motto-head{
-    margin-top:42px;
+  .motto-head{margin:44px 0 18px}
+  .motto-head h2{
+    font-size:clamp(1.5rem,7.4vw,2rem);
+    line-height:1.22;
   }
 
+  .motto-grid{gap:14px}
   .motto-column{
     padding:24px;
     border-radius:24px;
   }
-
-  .principle-item{
-    grid-template-columns:11px 1fr;
-    gap:11px;
+  .motto-column::before{top:22px;left:24px}
+  .motto-column::after{
+    right:-30px;
+    bottom:-34px;
+    width:112px;
+    height:86px;
   }
+  .motto-title{
+    margin-bottom:21px;
+    padding:31px 0 17px;
+  }
+  .motto-title h3{font-size:clamp(1.65rem,8vw,2rem)}
+
+  .principle-list{gap:22px;padding-right:15px}
+  .principle-item{grid-template-columns:11px minmax(0,1fr);gap:11px}
+  .principle-item h4{font-size:1rem}
+  .principle-item p{font-size:.9rem;line-height:1.8}
+}
+
+@media (max-width:420px){
+  .principles-hero h1{font-size:clamp(1.95rem,9.7vw,2.5rem)}
+  .principle-feature{padding:25px 21px 27px}
+  .principle-feature::before{left:21px}
+  .principle-feature h2{max-width:92%;font-size:clamp(1.65rem,7.8vw,1.95rem)}
+  .principle-feature-description{padding-right:20px}
+  .motto-head h2{font-size:clamp(1.45rem,7vw,1.8rem)}
+  .motto-column{padding:22px 21px}
+  .motto-column::before{left:21px}
+  .principle-list{padding-right:8px}
+}
+
+@media (max-width:350px){
+  .principles-hero h1{font-size:clamp(1.75rem,9.4vw,2.05rem)}
+  .principle-feature h2{max-width:100%}
+  .principle-feature-description{padding-right:0}
+  .motto-column::after,.principle-feature::after{opacity:.8}
 }
