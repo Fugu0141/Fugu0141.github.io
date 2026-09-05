@@ -30,7 +30,8 @@
   letter-spacing:-.055em;
   font-weight:850;
   text-wrap:balance;
-  overflow-wrap:anywhere;
+  word-break:keep-all;
+  overflow-wrap:normal;
 }
 
 .principles-hero p:last-child{
@@ -110,7 +111,8 @@
   line-height:1.12;
   letter-spacing:-.05em;
   text-wrap:balance;
-  overflow-wrap:anywhere;
+  word-break:keep-all;
+  overflow-wrap:normal;
 }
 
 .principle-feature-description{
@@ -138,8 +140,8 @@
   line-height:1.16;
   letter-spacing:-.04em;
   text-wrap:balance;
-  word-break:auto-phrase;
-  overflow-wrap:anywhere;
+  word-break:keep-all;
+  overflow-wrap:normal;
 }
 
 .motto-grid{
@@ -256,7 +258,8 @@
   line-height:1.5;
   letter-spacing:-.02em;
   text-wrap:balance;
-  overflow-wrap:anywhere;
+  word-break:keep-all;
+  overflow-wrap:normal;
 }
 
 .principle-item p{
@@ -324,7 +327,7 @@
   }
   .principle-feature-copy{padding-top:31px}
   .principle-feature h2{
-    max-width:85%;
+    max-width:100%;
     font-size:clamp(1.75rem,8vw,2.15rem);
     line-height:1.14;
   }
@@ -369,7 +372,7 @@
   .principles-hero h1{font-size:clamp(1.95rem,9.7vw,2.5rem)}
   .principle-feature{padding:25px 21px 27px}
   .principle-feature::before{left:21px}
-  .principle-feature h2{max-width:92%;font-size:clamp(1.65rem,7.8vw,1.95rem)}
+  .principle-feature h2{max-width:100%;font-size:clamp(1.65rem,7.8vw,1.95rem)}
   .principle-feature-description{padding-right:20px}
   .motto-head h2{font-size:clamp(1.45rem,7vw,1.8rem)}
   .motto-column{padding:22px 21px}
@@ -382,4 +385,16 @@
   .principle-feature h2{max-width:100%}
   .principle-feature-description{padding-right:0}
   .motto-column::after,.principle-feature::after{opacity:.8}
+}
+
+/* Extremely narrow embedded views get an emergency fallback.
+   At normal phone widths, headings only wrap at the explicit <wbr> positions in HTML. */
+@media (max-width:240px){
+  .principles-hero h1,
+  .principle-feature h2,
+  .motto-head h2,
+  .principle-item h4{
+    word-break:normal;
+    overflow-wrap:anywhere;
+  }
 }
