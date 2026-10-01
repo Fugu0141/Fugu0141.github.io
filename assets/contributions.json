@@ -1,14 +1,9 @@
 {
-  "generatedAt": "2026-09-30T22:11:49.745Z",
-  "from": "2025-10-01",
-  "to": "2026-09-30",
+  "generatedAt": "2026-10-01T22:38:15.630Z",
+  "from": "2025-10-02",
+  "to": "2026-10-01",
   "totalContributions": 1000,
   "days": [
-    {
-      "date": "2025-10-01",
-      "count": 0,
-      "level": "NONE"
-    },
     {
       "date": "2025-10-02",
       "count": 0,
@@ -1828,6 +1823,11 @@
       "date": "2026-09-30",
       "count": 1,
       "level": "FIRST_QUARTILE"
+    },
+    {
+      "date": "2026-10-01",
+      "count": 0,
+      "level": "NONE"
     }
   ]
 }
