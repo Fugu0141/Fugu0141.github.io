@@ -1,14 +1,9 @@
 {
-  "generatedAt": "2026-11-27T01:41:21.058Z",
-  "from": "2025-11-28",
-  "to": "2026-11-27",
-  "totalContributions": 4055,
+  "generatedAt": "2026-11-28T01:25:34.125Z",
+  "from": "2025-11-29",
+  "to": "2026-11-28",
+  "totalContributions": 4148,
   "days": [
-    {
-      "date": "2025-11-28",
-      "count": 0,
-      "level": "NONE"
-    },
     {
       "date": "2025-11-29",
       "count": 0,
@@ -1826,8 +1821,13 @@
     },
     {
       "date": "2026-11-27",
-      "count": 297,
+      "count": 313,
       "level": "FOURTH_QUARTILE"
+    },
+    {
+      "date": "2026-11-28",
+      "count": 77,
+      "level": "FIRST_QUARTILE"
     }
   ]
 }
